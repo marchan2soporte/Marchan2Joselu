@@ -40,3 +40,20 @@ button{touch-action:manipulation}.button,.pill{min-height:48px;font-size:14px}.p
 .company-section input:focus{border-color:#334e60;box-shadow:0 0 0 2px #334e6020}
 .company-actions{border-radius:4px;box-shadow:none;border-color:#d9e2e4;padding:18px}
 @media(max-width:700px){.company-heading{align-items:flex-start;flex-direction:column}.company-section label{grid-template-columns:1fr;gap:6px}}
+/* Marchan2's own company workspace: dark hero, editorial cards, stacked fields. */
+.company-page{max-width:1240px;padding-top:0}
+.company-heading{background:#103e39;color:#fff;border-radius:28px;padding:34px 40px;margin-bottom:28px;align-items:end}
+.company-heading .eyebrow{color:#c3f46a}
+.company-heading h2{font-size:38px;letter-spacing:-1.4px;margin:14px 0 8px}
+.company-heading p{color:#d5e9e4;max-width:440px}
+.company-heading .button{background:#fff;color:#103e39;border-radius:12px}
+.company-grid{grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:20px}
+.company-left{gap:20px}
+.company-section{border:1px solid #dce6de;border-radius:22px;box-shadow:0 10px 35px #18362a09;padding:27px 30px 30px}
+.company-section legend{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;font-weight:800;color:#166852;padding:0 8px}
+.company-section label{display:grid;grid-template-columns:1fr;gap:7px;margin-bottom:17px;font-size:12px;font-weight:700;color:#47635b}
+.company-section input{height:46px;border-radius:11px;padding:11px 13px;border-color:#dce6de;font-size:14px}
+.company-section input:focus{border-color:#166852;box-shadow:0 0 0 3px #16685212}
+.company-actions{justify-content:flex-end;border-radius:18px;padding:16px 20px;background:#eaf1eb;border:0}
+@media(max-width:850px){.company-grid{grid-template-columns:1fr}.company-heading{padding:28px}.company-actions{justify-content:center}}
+@media(max-width:550px){.company-heading{align-items:start}.company-heading h2{font-size:30px}.company-section{padding:22px}.company-actions{flex-direction:column}.company-actions button{width:100%}}

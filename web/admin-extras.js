@@ -39,11 +39,11 @@ async function renderCompany(){
         const data=await api('company');
         if(view!=='company'||request!==companyRequest)return;
         const field=(key,label,max,type='text')=>`<label for="company-${key}">${label}<input id="company-${key}" name="${key}" type="${type}" maxlength="${max}" value="${esc(data[key])}"></label>`;
-        $('#main').innerHTML=`<div class="company-page"><div class="company-heading"><div><span class="eyebrow">ADMINISTRACIÓN / IDENTIDAD</span><h2>Empresa</h2><p>Los datos principales de tu negocio, en un solo lugar.</p></div>${adminBack()}</div>
+        $('#main').innerHTML=`<div class="company-page"><div class="company-heading"><div><span class="eyebrow">TU NEGOCIO · CONFIGURACIÓN</span><h2>Empresa</h2><p>Define cómo se identifica tu negocio y dónde pueden encontrarte.</p></div>${adminBack()}</div>
         <form id="company-form"><div class="company-grid"><div class="company-left">
-        <fieldset class="panel company-section"><legend>Datos administrativos</legend>${field('legal_name','Nombre Fiscal:',160)}${field('trade_name','Nombre Comercial:',160)}${field('tax_id','CIF:',32)}</fieldset>
-        <fieldset class="panel company-section"><legend>Ubicación</legend>${field('address','Dirección:',240)}${field('city','Población:',120)}${field('province','Provincia:',120)}${field('postal_code','Código Postal:',20)}</fieldset></div>
-        <fieldset class="panel company-section"><legend>Contacto</legend>${field('contact','Contacto:',160)}${field('phone','Teléfono:',40,'tel')}${field('email','Email:',254,'email')}${field('website','Página Web:',240)}</fieldset></div>
+        <fieldset class="panel company-section"><legend>01 · Identidad</legend>${field('legal_name','Nombre Fiscal:',160)}${field('trade_name','Nombre Comercial:',160)}${field('tax_id','CIF:',32)}</fieldset>
+        <fieldset class="panel company-section"><legend>02 · Dónde estamos</legend>${field('address','Dirección:',240)}${field('city','Población:',120)}${field('province','Provincia:',120)}${field('postal_code','Código Postal:',20)}</fieldset></div>
+        <fieldset class="panel company-section"><legend>03 · Hablemos</legend>${field('contact','Contacto:',160)}${field('phone','Teléfono:',40,'tel')}${field('email','Email:',254,'email')}${field('website','Página Web:',240)}</fieldset></div>
         <p id="company-error" class="inline-error" role="alert"></p><div class="panel company-actions"><button class="button primary" type="submit">Guardar cambios</button><button class="button secondary" type="button" id="company-cancel">Cancelar</button></div></form></div>`;
         $('#company-cancel').onclick=()=>go('manage');
         $('#company-form').onsubmit=async event=>{

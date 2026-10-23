@@ -1,4 +1,4 @@
-# Marchan2 0.5 — JoseluIA
+# Marchan2 0.6 — JoseluIA
 
 ## Abrir
 Extrae TODO el ZIP y conserva _internal junto a los dos ejecutables.
@@ -52,6 +52,6 @@ Ejecutables: python tests/check_dual_apps.py --frozen
 ## Repositorio y próximas actualizaciones
 Repositorio oficial del proyecto: https://github.com/marchan2soporte/Marchan2.
 Las actualizaciones de este trabajo se guardan aquí mediante commits, con su versión y cambios documentados. Las instrucciones persistentes están en AGENTS.md.
-GitHub comprueba las pruebas en cada push. Los tags de versión (por ejemplo, v0.5) activan la construcción y publicación del ZIP de Windows. También puede construirse manualmente desde Actions > Windows release.
+GitHub comprueba las pruebas en cada push. Los tags de versión (por ejemplo, v0.6) activan la construcción y publicación del ZIP de Windows. También puede construirse manualmente desde Actions > Windows release.
 Los ejecutables se descargan desde Releases; el código fuente se mantiene en el repositorio. Conserva la carpeta _internal al extraer un paquete de Windows.
 No se incluyen bases de datos, clientes, sesiones ni credenciales de los equipos de trabajo.

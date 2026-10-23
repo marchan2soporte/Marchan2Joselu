@@ -71,7 +71,7 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.5'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.6'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
