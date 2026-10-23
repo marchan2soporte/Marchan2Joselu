@@ -6,6 +6,8 @@ Administración → Series permite crear, buscar, copiar, editar y eliminar seri
 
 Administración → Configuración global sustituye la tarjeta Locales. Permite guardar asignaciones de series activas por tipo de documento para el punto de venta. El TPV todavía no consume esas asignaciones. Las opciones de stock, impresión, propinas, recargos, pedidos, cierre y administración web se muestran como pendientes sin controles que aparenten estar operativos.
 
+El formulario completo de Configuración global guarda además preferencias de stock, operativa de venta, comandas, propinas, recargo, pedidos, cierre y administración web. Estos controles están identificados como preferencias para próximas funciones y todavía no cambian la operación del TPV. Scan & Pay y pedido en mesa solo ofrecen el valor Desactivado hasta que existan esos módulos.
+
 Administración → Plantillas de ticket permite crear, copiar, editar y eliminar diseños de prueba, elegir formato 80 mm o A4, cabecera, pie y visibilidad de hora, usuario e IVA orientativo. La plantilla predeterminada se aplica al detalle imprimible de las cuentas en TPV y Administración. La vista previa usa datos ficticios. No se generan facturas fiscales, códigos QR ni salida directa a una impresora configurada.
 
 28 informes disponibles de 69 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.

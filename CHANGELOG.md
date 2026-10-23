@@ -1,6 +1,7 @@
 # Cambios de Marchan2
 
 ## Pendiente de versión
+- Configuración global: formulario completo de preferencias guardadas para futuras funciones, con estado visible de lo que aún no afecta al TPV.
 - Plantillas de ticket: editor con vista previa y aplicación de la plantilla predeterminada al detalle imprimible de las cuentas de prueba.
 - Configuración global sustituye Locales y permite preparar la asignación de series; las demás opciones de la referencia indican su estado pendiente.
 - Series: gestión local de series de documentos con búsqueda, copia, edición, eliminación y número siguiente previsto.
