@@ -2,13 +2,13 @@ let reportEntries=[],dashboardData=null,reportData=null,selectedReport='',report
 const localDate=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 reportStart=localDate(new Date(new Date().getFullYear(),new Date().getMonth(),1));reportEnd=localDate();
 const managementGroups={
-'Identidad y organización':['Empresa','Series','Locales','Plantillas de ticket','Plantillas de etiquetas','Grupos de periodos de servicio','Tipos de clientes','Clientes','Grupos de puntos de venta','Puntos de venta','Administración web'],
+'Identidad y organización':['Empresa','Series','Configuración global','Plantillas de ticket','Plantillas de etiquetas','Grupos de periodos de servicio','Tipos de clientes','Clientes','Grupos de puntos de venta','Puntos de venta','Administración web'],
 'Personas y accesos':['Perfiles de usuario','Usuarios'],
 'Carta':['Grupos mayores','Familias','Categorías','Productos','Menús','Alérgenos','Etiquetas de productos'],
 'Precios y cobro':['Impuestos','Formas de pago','Centros de venta','Tarifas','Promociones','Descuentos'],
 'Preparación':['Plantillas de comandas','Notas de preparación','Motivos de cancelación','Tipos de preparación','Órdenes de preparación','Monitores de cocina'],
 'Entradas':['Plantillas de entradas','Entradas']};
-const managementRoutes={'Series':'series','Empresa':'company','Usuarios':'users','Productos':'catalog','Categorías':'categories','Familias':'families','Centros de venta':'settings','Perfiles de usuario':'profiles','Impuestos':'taxes','Formas de pago':'methods','Tipos de preparación':'prep','Órdenes de preparación':'courses','Monitores de cocina':'monitors'};
+const managementRoutes={'Configuración global':'global_config','Series':'series','Empresa':'company','Usuarios':'users','Productos':'catalog','Categorías':'categories','Familias':'families','Centros de venta':'settings','Perfiles de usuario':'profiles','Impuestos':'taxes','Formas de pago':'methods','Tipos de preparación':'prep','Órdenes de preparación':'courses','Monitores de cocina':'monitors'};
 const managementDescriptions={'Empresa':'Identidad, dirección y datos del negocio.','Series':'Numeración de documentos y series.','Locales':'Establecimientos vinculados a los puestos.','Plantillas de ticket':'Diseño y contenido de documentos impresos.','Plantillas de etiquetas':'Formatos para etiquetado de productos.','Grupos de periodos de servicio':'Franjas y turnos del servicio.','Tipos de clientes':'Clasificación de clientes.','Clientes':'Fichas y vinculación de ventas a clientes.','Grupos de puntos de venta':'Agrupación de terminales.','Puntos de venta':'Registro y conexión de terminales.','Administración web':'Acceso remoto; actualmente solo funciona en este equipo.','Grupos mayores':'Un nivel adicional de agrupación de familias.','Menús':'Composición y elecciones de menús.','Alérgenos':'Asignación de alérgenos a productos.','Etiquetas de productos':'Clasificación mediante etiquetas.','Tarifas':'Precios alternativos por centro y servicio.','Promociones':'Reglas promocionales aplicadas al vender.','Descuentos':'Reglas y permisos para descuentos.','Plantillas de comandas':'Diseño de comandas para impresoras.','Notas de preparación':'Listado reutilizable de notas; actualmente se escribe una nota libre por línea en el TPV.','Motivos de cancelación':'Motivos y registro de anulaciones.','Plantillas de entradas':'Plantillas reutilizables para recepciones de mercancía.','Entradas':'Emisión y control de entradas.'};
 function adminBack(label='Administración'){return `<button class="button secondary" data-admin-back>← ${esc(label)}</button>`}
 function metric(label,value,sub){return `<article class="insight-metric"><span>${esc(label)}</span><strong>${value}</strong><small>${esc(sub)}</small></article>`}
@@ -29,11 +29,26 @@ managementRoutes['Entradas']='inventory';
 managementGroups['Almacén']=['Proveedores','Artículos de almacén','Movimientos de mercancía'];
 managementRoutes['Proveedores']='inventory';managementRoutes['Artículos de almacén']='inventory';managementRoutes['Movimientos de mercancía']='inventory';
 const originalOpenModule=openManagementModule;
-openManagementModule=function(name){if(managementRoutes[name]==='company'){go('company');return}if(managementRoutes[name]==='series'){go('series');return}if(managementRoutes[name]==='inventory'){renderInventory();return}originalOpenModule(name)};
+openManagementModule=function(name){if(managementRoutes[name]==='company'){go('company');return}if(managementRoutes[name]==='series'){go('series');return}if(managementRoutes[name]==='global_config'){go('global_config');return}if(managementRoutes[name]==='inventory'){renderInventory();return}originalOpenModule(name)};
 let inventoryData=null;
 let companyRequest=0;
 let seriesData=[],seriesQuery='',seriesRequest=0;
 const seriesTypes=['Fra. Simp.','Factura','Albarán','Dev. Simp.','Devolución','Pedido','Ped. Proveedor','Alb. Proveedor','Fra. Proveedor'];
+const globalSeriesTypes=['Fra. Simp.','Factura','Dev. Simp.','Devolución','Pedido','Albarán'];
+let globalConfigRequest=0;
+async function renderGlobalConfig(){
+    const request=++globalConfigRequest;
+    $('#main').innerHTML='<div class="loading-panel">Cargando configuración global…</div>';
+    try{
+        const [config,seriesList]=await Promise.all([api('global_config'),api('series')]);
+        if(view!=='global_config'||request!==globalConfigRequest)return;
+        const select=(kind,index)=>{const selected=config.pos_series[kind],items=seriesList.filter(s=>s.type===kind&&s.active);return `<label>${esc(kind)}<select data-global-kind="${esc(kind)}"><option value="">Sin asignar</option>${items.map(s=>`<option value="${s.id}" ${s.id===selected?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`};
+        const pending=(title,items)=>`<section class="panel global-card"><span class="status-pill planned">PENDIENTE</span><h3>${title}</h3><p>${items}</p></section>`;
+        $('#main').innerHTML=`<div class="global-page"><section class="global-hero"><div><span class="eyebrow">ADMINISTRACIÓN / AJUSTES</span><h2>Configuración global</h2><p>Preferencias generales del negocio y estado de las funciones futuras.</p></div>${adminBack()}</section><div class="global-layout"><section class="panel global-card global-main"><span class="status-pill ready">CONFIGURABLE</span><h3>Series del punto de venta</h3><p>Elige qué serie se reservará para cada tipo de documento. Puedes crear nuevas series en Administración → Series.</p><form id="global-form"><div class="global-series-grid">${globalSeriesTypes.map(select).join('')}</div><p class="report-note">Esta asignación se guarda, pero el TPV aún no emite documentos con estas series ni incrementa su numeración.</p><p id="global-error" class="inline-error" role="alert"></p><div class="global-actions"><button class="button primary">Guardar configuración</button><button type="button" class="button secondary" id="global-cancel">Cancelar</button></div></form></section><div class="global-pending">${pending('Venta y stock','Avisos de stock mínimo, cancelaciones con motivo, límite de factura simplificada y clientes por grupo.')}${pending('Comandas y pedidos','Plantillas de impresión, propinas sugeridas, recargo por servicio, Scan & Pay y pedido en mesa.')}${pending('Cierre de sistema','Resumen de ventas, cierre automático, impresiones y preparación programada.')}${pending('Administración web','La facturación desde web y sus series requieren un módulo de emisión de documentos.')}</div></div></div>`;
+        $('#global-cancel').onclick=()=>go('manage');
+        $('#global-form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('.button.primary');button.disabled=true;try{const pos_series=Object.fromEntries([...form.querySelectorAll('[data-global-kind]')].map(select=>[select.dataset.globalKind,select.value||null]));await api('global_config',{pos_series});toast('Configuración global guardada');go('manage')}catch(error){$('#global-error').textContent=error.message;button.disabled=false}};
+    }catch(error){if(view==='global_config'&&request===globalConfigRequest)$('#main').innerHTML=adminBack()+empty('No se pudo cargar la configuración global',error.message)}
+}
 async function renderSeries(){
     const request=++seriesRequest;
     $('#main').innerHTML='<div class="loading-panel">Cargando series…</div>';

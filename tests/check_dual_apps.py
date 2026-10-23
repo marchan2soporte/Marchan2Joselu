@@ -18,7 +18,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--frozen',action='store_tr
 class Client:
     def __init__(self,app,folder):
         name='Marchan2_TPV.exe' if app=='tpv' else 'Marchan2_Administracion.exe'
-        command=[str(root/'dist/Marchan2_v0.7'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
+        command=[str(root/'dist/Marchan2_v0.8'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
@@ -71,6 +71,10 @@ with tempfile.TemporaryDirectory() as tmp:
         assert admin.request('series')==[]
         admin.request('series_save',{'name':'F QA','type':'Factura','next_number':'1','active':True})
         assert admin.request('series')[0]['name']=='F QA'
+        config=admin.request('global_config');assert config['pos_series']['Factura'] is None
+        config['pos_series']['Factura']=admin.request('series')[0]['id']
+        admin.request('global_config',config)
+        assert admin.request('global_config')['pos_series']['Factura']==config['pos_series']['Factura']
         admin.request('series_save',{'name':'F QA','type':'Factura','next_number':'2'},status=409)
         assert admin.request('company')['legal_name']==''
         admin.request('company',{'legal_name':'EMPRESA QA','postal_code':'01001'})
@@ -92,6 +96,7 @@ with tempfile.TemporaryDirectory() as tmp:
         tpv.request('inventory',status=403)
         tpv.request('company',status=403)
         tpv.request('series',status=403)
+        tpv.request('global_config',status=403)
         tpv.request('series_save',{'name':'BLOCKED'},status=403)
         tpv.request('company',{'legal_name':'BLOCKED'},status=403)
         tpv.request('product',{'name':'BLOCKED'},status=403)

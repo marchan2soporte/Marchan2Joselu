@@ -4,6 +4,8 @@ Administración → Empresa permite guardar nombre fiscal, nombre comercial, CIF
 
 Administración → Series permite crear, buscar, copiar, editar y eliminar series de documentos con tipo, siguiente número y estado. Es configuración local; la numeración todavía no se aplica a tickets ni otros documentos.
 
+Administración → Configuración global sustituye la tarjeta Locales. Permite guardar asignaciones de series activas por tipo de documento para el punto de venta. El TPV todavía no consume esas asignaciones. Las opciones de stock, impresión, propinas, recargos, pedidos, cierre y administración web se muestran como pendientes sin controles que aparenten estar operativos.
+
 28 informes disponibles de 69 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.
 
 | Área | Informe | Estado |
