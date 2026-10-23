@@ -1,6 +1,8 @@
 name: Windows release
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -52,4 +54,13 @@ jobs:
         shell: pwsh
         run: |
           gh release create $env:GITHUB_REF_NAME $env:RELEASE_ZIP --verify-tag --title "Marchan2 $env:GITHUB_REF_NAME" --notes-file CHANGELOG.md
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish automatic release for main
+        if: github.ref_type == 'branch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "update-$env:GITHUB_RUN_NUMBER"
+          gh release create $tag $env:RELEASE_ZIP --target $env:GITHUB_SHA --title "Marchan2 actualización $env:GITHUB_RUN_NUMBER" --generate-notes
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
