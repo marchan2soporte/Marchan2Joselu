@@ -8,7 +8,7 @@ const managementGroups={
 'Precios y cobro':['Impuestos','Formas de pago','Centros de venta','Tarifas','Promociones','Descuentos'],
 'Preparación':['Plantillas de comandas','Notas de preparación','Motivos de cancelación','Tipos de preparación','Órdenes de preparación','Monitores de cocina'],
 'Entradas':['Plantillas de entradas','Entradas']};
-const managementRoutes={'Empresa':'company','Usuarios':'users','Productos':'catalog','Categorías':'categories','Familias':'families','Centros de venta':'settings','Perfiles de usuario':'profiles','Impuestos':'taxes','Formas de pago':'methods','Tipos de preparación':'prep','Órdenes de preparación':'courses','Monitores de cocina':'monitors'};
+const managementRoutes={'Series':'series','Empresa':'company','Usuarios':'users','Productos':'catalog','Categorías':'categories','Familias':'families','Centros de venta':'settings','Perfiles de usuario':'profiles','Impuestos':'taxes','Formas de pago':'methods','Tipos de preparación':'prep','Órdenes de preparación':'courses','Monitores de cocina':'monitors'};
 const managementDescriptions={'Empresa':'Identidad, dirección y datos del negocio.','Series':'Numeración de documentos y series.','Locales':'Establecimientos vinculados a los puestos.','Plantillas de ticket':'Diseño y contenido de documentos impresos.','Plantillas de etiquetas':'Formatos para etiquetado de productos.','Grupos de periodos de servicio':'Franjas y turnos del servicio.','Tipos de clientes':'Clasificación de clientes.','Clientes':'Fichas y vinculación de ventas a clientes.','Grupos de puntos de venta':'Agrupación de terminales.','Puntos de venta':'Registro y conexión de terminales.','Administración web':'Acceso remoto; actualmente solo funciona en este equipo.','Grupos mayores':'Un nivel adicional de agrupación de familias.','Menús':'Composición y elecciones de menús.','Alérgenos':'Asignación de alérgenos a productos.','Etiquetas de productos':'Clasificación mediante etiquetas.','Tarifas':'Precios alternativos por centro y servicio.','Promociones':'Reglas promocionales aplicadas al vender.','Descuentos':'Reglas y permisos para descuentos.','Plantillas de comandas':'Diseño de comandas para impresoras.','Notas de preparación':'Listado reutilizable de notas; actualmente se escribe una nota libre por línea en el TPV.','Motivos de cancelación':'Motivos y registro de anulaciones.','Plantillas de entradas':'Plantillas reutilizables para recepciones de mercancía.','Entradas':'Emisión y control de entradas.'};
 function adminBack(label='Administración'){return `<button class="button secondary" data-admin-back>← ${esc(label)}</button>`}
 function metric(label,value,sub){return `<article class="insight-metric"><span>${esc(label)}</span><strong>${value}</strong><small>${esc(sub)}</small></article>`}
@@ -29,9 +29,33 @@ managementRoutes['Entradas']='inventory';
 managementGroups['Almacén']=['Proveedores','Artículos de almacén','Movimientos de mercancía'];
 managementRoutes['Proveedores']='inventory';managementRoutes['Artículos de almacén']='inventory';managementRoutes['Movimientos de mercancía']='inventory';
 const originalOpenModule=openManagementModule;
-openManagementModule=function(name){if(managementRoutes[name]==='company'){go('company');return}if(managementRoutes[name]==='inventory'){renderInventory();return}originalOpenModule(name)};
+openManagementModule=function(name){if(managementRoutes[name]==='company'){go('company');return}if(managementRoutes[name]==='series'){go('series');return}if(managementRoutes[name]==='inventory'){renderInventory();return}originalOpenModule(name)};
 let inventoryData=null;
 let companyRequest=0;
+let seriesData=[],seriesQuery='',seriesRequest=0;
+const seriesTypes=['Fra. Simp.','Factura','Albarán','Dev. Simp.','Devolución','Pedido','Ped. Proveedor','Alb. Proveedor','Fra. Proveedor'];
+async function renderSeries(){
+    const request=++seriesRequest;
+    $('#main').innerHTML='<div class="loading-panel">Cargando series…</div>';
+    try{
+        seriesData=await api('series');
+        if(view!=='series'||request!==seriesRequest)return;
+        $('#main').innerHTML=`<div class="series-page"><section class="series-hero"><div><span class="eyebrow">ADMINISTRACIÓN / DOCUMENTOS</span><h2>Series</h2><p>Organiza los nombres y la numeración prevista para tus documentos.</p></div>${adminBack()}</section><div class="report-note">Las series se guardan aquí como configuración. Los tickets y documentos del TPV todavía no usan esta numeración.</div><section class="panel series-panel"><div class="series-toolbar"><button class="button primary" id="series-new">+ Nueva serie</button><input id="series-search" type="search" placeholder="Buscar por nombre o tipo…" aria-label="Buscar series" value="${esc(seriesQuery)}"></div><div id="series-list"></div></section></div>`;
+        $('#series-new').onclick=()=>seriesEditor();
+        $('#series-search').oninput=e=>{seriesQuery=e.target.value;drawSeries()};
+        drawSeries();
+    }catch(error){if(view==='series'&&request===seriesRequest)$('#main').innerHTML=adminBack()+empty('No se pudieron cargar las series',error.message)}
+}
+function drawSeries(){
+    const rows=seriesData.filter(s=>`${s.name} ${s.type}`.toLocaleLowerCase().includes(seriesQuery.toLocaleLowerCase()));
+    $('#series-list').innerHTML=rows.length?`<div class="scroll-table"><table class="admin-table series-table"><thead><tr><th>SERIE</th><th>TIPO</th><th>SIGUIENTE Nº</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>${rows.map(s=>`<tr><td><strong>${esc(s.name)}</strong><small>#${s.id}</small></td><td>${esc(s.type)}</td><td>${s.next_number}</td><td><span class="status-pill ${s.active?'ready':'planned'}">${s.active?'EN USO':'INACTIVA'}</span></td><td><div class="series-actions"><button class="button secondary" data-series-edit="${s.id}">Editar</button><button class="button secondary" data-series-copy="${s.id}">Copiar</button><button class="button secondary" data-series-delete="${s.id}">Eliminar</button></div></td></tr>`).join('')}</tbody></table></div>`:empty(seriesQuery?'No hay coincidencias':'Aún no hay series',seriesQuery?'Prueba con otro nombre o tipo.':'Crea la primera serie para organizar tus documentos.');
+    $('#series-list').onclick=async e=>{const b=e.target.closest('button');if(!b)return;const id=Number(b.dataset.seriesEdit||b.dataset.seriesCopy||b.dataset.seriesDelete),item=seriesData.find(s=>s.id===id);if(!item)return;if(b.dataset.seriesDelete){if(!confirm(`¿Eliminar la serie «${item.name}»?`))return;try{await api('series_delete',{id});toast('Serie eliminada');renderSeries()}catch(error){toast(error.message,true)}return}seriesEditor(item,Boolean(b.dataset.seriesCopy))};
+}
+function seriesEditor(item=null,copy=false){
+    const original=copy?null:item;
+    openModal(modalTitle(original?'Editar serie':copy?'Copiar serie':'Nueva serie','Configura el nombre, tipo y próximo número previsto.')+`<form id="series-form"><div class="form-grid"><label class="full">NOMBRE<input id="series-name" required maxlength="40" value="${esc(copy?'':item?.name||'')}" placeholder="Ejemplo: F2026"></label><label>TIPO<select id="series-type">${seriesTypes.map(t=>`<option value="${esc(t)}" ${t===(item?.type||seriesTypes[0])?'selected':''}>${esc(t)}</option>`).join('')}</select></label><label>SIGUIENTE Nº<input id="series-next" type="number" min="1" max="999999999" required value="${item?.next_number||1}"></label><label class="full series-active"><input id="series-active" type="checkbox" ${item?.active===0?'':'checked'}> En uso</label></div><p class="report-note">Este número aún no avanza automáticamente al vender o emitir documentos.</p><p id="series-error" class="inline-error" role="alert"></p><div class="form-actions"><button type="button" class="button secondary" data-close>Cancelar</button><button class="button primary">Guardar serie</button></div></form>`);
+    $('#series-form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button[type="submit"]')||form.querySelector('.button.primary');button.disabled=true;try{await api('series_save',{...(original?{id:original.id}:{}),name:$('#series-name').value,type:$('#series-type').value,next_number:$('#series-next').value,active:$('#series-active').checked});closeModal();toast('Serie guardada');renderSeries()}catch(error){$('#series-error').textContent=error.message;button.disabled=false}};
+}
 async function renderCompany(){
     const request=++companyRequest;
     $('#main').innerHTML='<div class="loading-panel">Cargando empresa…</div>';

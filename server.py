@@ -4,6 +4,7 @@ from urllib.parse import urlparse,parse_qs
 from analytics import dashboard,report,report_catalog
 import inventory
 import company
+import series
 import json
 import os
 from pathlib import Path
@@ -31,6 +32,7 @@ def main(default_app='tpv'):
     folder.mkdir(parents=True,exist_ok=True)
     store=Store(folder/'marchan2.db')
     inventory.initialize(store)
+    series.initialize(store)
     assets=Path(getattr(sys,'_MEIPASS',Path(__file__).parent))/'web'
     token=secrets.token_urlsafe(32)
     sessions={};attempts={};guard=threading.Lock()
@@ -71,12 +73,15 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.6'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.7'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,company.read(store))
+                if path=='/api/series':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,series.list_all(store))
                 if path=='/api/inventory':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,inventory.state(store))
@@ -128,6 +133,9 @@ def main(default_app='tpv'):
                 if action=='company':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,company.save(store,data))
+                if action in ('series_save','series_delete'):
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,series.save(store,data) if action=='series_save' else series.delete(store,data))
                 if action=='shutdown':
                     self.reply(200,{'ok':True});threading.Thread(target=self.server.shutdown,daemon=True).start();return
                 if action in ('supplier','stock_item','stock_move'):

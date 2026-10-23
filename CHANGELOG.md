@@ -1,6 +1,7 @@
 # Cambios de Marchan2
 
 ## Pendiente de versión
+- Series: gestión local de series de documentos con búsqueda, copia, edición, eliminación y número siguiente previsto.
 - Empresa: ficha editable de datos administrativos, ubicación y contacto, guardada localmente desde Administración.
 
 ## 0.3

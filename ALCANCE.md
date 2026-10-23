@@ -2,6 +2,8 @@
 
 Administración → Empresa permite guardar nombre fiscal, nombre comercial, CIF, dirección, población, provincia, código postal, contacto, teléfono, email y página web. Aceptar guarda la ficha local; Cancelar descarta la edición. Estos datos todavía no se incorporan a los tickets.
 
+Administración → Series permite crear, buscar, copiar, editar y eliminar series de documentos con tipo, siguiente número y estado. Es configuración local; la numeración todavía no se aplica a tickets ni otros documentos.
+
 28 informes disponibles de 69 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.
 
 | Área | Informe | Estado |

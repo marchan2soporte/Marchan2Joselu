@@ -1,4 +1,4 @@
-# Marchan2 0.6 — JoseluIA
+# Marchan2 0.7 — JoseluIA
 
 ## Abrir
 Extrae TODO el ZIP y conserva _internal junto a los dos ejecutables.
@@ -19,9 +19,9 @@ El resumen de impuestos es orientativo, con IVA incluido y redondeo por tipo. No
 
 ## Administración
 Incluye los apartados identificados en las capturas, con diseño propio y estado visible.
-Activos: empresa, productos, usuarios, creación de categorías/familias, centros/mesas, consultas de perfiles, impuestos, formas de pago, preparación y acceso al almacén manual.
+Activos: empresa, series, productos, usuarios, creación de categorías/familias, centros/mesas, consultas de perfiles, impuestos, formas de pago, preparación y acceso al almacén manual.
 Los perfiles, tipos de impuesto, métodos de pago y órdenes de preparación son los valores fijos de la versión anterior. Consultarlos no implica que ya exista un editor de valores personalizados.
-Pendientes de implementación: series, locales independientes, plantillas, clientes, periodos de servicio, terminales en red, grupos mayores, menús, alérgenos, etiquetas, tarifas, promociones, descuentos y otras configuraciones señaladas en pantalla.
+Pendientes de implementación: locales independientes, plantillas, clientes, periodos de servicio, terminales en red, grupos mayores, menús, alérgenos, etiquetas, tarifas, promociones, descuentos y otras configuraciones señaladas en pantalla.
 
 ## Entradas de mercancía y almacén manual
 Crea proveedores y artículos independientes del catálogo de venta. Registra recepciones por proveedor y referencia, salidas manuales o mermas. Admite cantidades positivas de hasta tres decimales y bloquea salidas superiores al saldo.
@@ -52,6 +52,6 @@ Ejecutables: python tests/check_dual_apps.py --frozen
 ## Repositorio y próximas actualizaciones
 Repositorio oficial del proyecto: https://github.com/marchan2soporte/Marchan2.
 Las actualizaciones de este trabajo se guardan aquí mediante commits, con su versión y cambios documentados. Las instrucciones persistentes están en AGENTS.md.
-GitHub comprueba las pruebas en cada push. Los tags de versión (por ejemplo, v0.6) activan la construcción y publicación del ZIP de Windows. También puede construirse manualmente desde Actions > Windows release.
+GitHub comprueba las pruebas en cada push. Los tags de versión (por ejemplo, v0.7) activan la construcción y publicación del ZIP de Windows. También puede construirse manualmente desde Actions > Windows release.
 Los ejecutables se descargan desde Releases; el código fuente se mantiene en el repositorio. Conserva la carpeta _internal al extraer un paquete de Windows.
 No se incluyen bases de datos, clientes, sesiones ni credenciales de los equipos de trabajo.
