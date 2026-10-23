@@ -6,6 +6,7 @@ import inventory
 import company
 import series
 import global_config
+import ticket_templates
 import json
 import os
 from pathlib import Path
@@ -34,6 +35,7 @@ def main(default_app='tpv'):
     store=Store(folder/'marchan2.db')
     inventory.initialize(store)
     series.initialize(store)
+    ticket_templates.initialize(store)
     assets=Path(getattr(sys,'_MEIPASS',Path(__file__).parent))/'web'
     token=secrets.token_urlsafe(32)
     sessions={};attempts={};guard=threading.Lock()
@@ -74,7 +76,7 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.8'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.9'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -86,6 +88,9 @@ def main(default_app='tpv'):
                 if path=='/api/global_config':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,global_config.read(store))
+                if path=='/api/ticket_templates':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,ticket_templates.list_all(store))
                 if path=='/api/inventory':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,inventory.state(store))
@@ -97,7 +102,7 @@ def main(default_app='tpv'):
                     if path=='/api/analytics/report':return self.reply(200,report(store,q.get('id',[''])[0],q.get('start',[''])[0],q.get('end',[''])[0]))
                     return self.reply(404,{'error':'Informe no encontrado.'})
                 if path=='/api/state':
-                    data=store.state();data['user']=user
+                    data=store.state();data['user']=user;data['ticket_template']=ticket_templates.current(store)
                     if args.app=='tpv':
                         for key in ('stats','history','payment_history'):data.pop(key,None)
                     else:data['users']=store.users(False)
@@ -143,6 +148,9 @@ def main(default_app='tpv'):
                 if action=='global_config':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,global_config.save(store,data))
+                if action in ('ticket_template_save','ticket_template_delete'):
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,ticket_templates.save(store,data) if action=='ticket_template_save' else ticket_templates.delete(store,data))
                 if action=='shutdown':
                     self.reply(200,{'ok':True});threading.Thread(target=self.server.shutdown,daemon=True).start();return
                 if action in ('supplier','stock_item','stock_move'):
