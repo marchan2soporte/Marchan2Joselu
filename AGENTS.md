@@ -4,7 +4,7 @@
 Marchan2 is an independent Windows POS and administration application. Preserve the separation between TPV and Administration and their shared local SQLite data. Do not modify Agora or SELUCARTAS300.
 
 ## Standing publication instruction from the owner
-The canonical repository is https://github.com/marchan2soporte/Marchan2.git.
+The canonical repository is https://github.com/marchan2soporte/Marchan2Pedro.git.
 The owner explicitly requested that future Marchan2 updates made in this work be committed and pushed to this repository. After each requested update, run the relevant checks, update the version/documentation when appropriate, commit and push the resulting source changes. Do not claim publication unless the remote contains the commit. Never force-push or overwrite unrelated remote changes. If access fails, retain the work locally and explain the exact blocker.
 
 Never commit customer data, databases, QA folders, session files, credentials, build directories or local paths containing personal data. Use isolated data for tests. Do not reset a user's active databases.

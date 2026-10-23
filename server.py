@@ -3,6 +3,7 @@ import argparse
 from urllib.parse import urlparse,parse_qs
 from analytics import dashboard,report,report_catalog
 import inventory
+import company
 import json
 import os
 from pathlib import Path
@@ -73,6 +74,9 @@ def main(default_app='tpv'):
                     return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.3'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
+                if path=='/api/company':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,company.read(store))
                 if path=='/api/inventory':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,inventory.state(store))
@@ -121,6 +125,9 @@ def main(default_app='tpv'):
                     return self.reply(200,{'ok':True})
                 user=self.user()
                 if not user:return self.reply(401,{'error':'La sesión ha terminado. Entra con tu usuario.'})
+                if action=='company':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,company.save(store,data))
                 if action=='shutdown':
                     self.reply(200,{'ok':True});threading.Thread(target=self.server.shutdown,daemon=True).start();return
                 if action in ('supplier','stock_item','stock_move'):

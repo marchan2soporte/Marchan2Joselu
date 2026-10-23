@@ -1,5 +1,8 @@
 # Cambios de Marchan2
 
+## Pendiente de versión
+- Empresa: ficha editable de datos administrativos, ubicación y contacto, guardada localmente desde Administración.
+
 ## 0.3
 - Nuevo inicio con ventas de hoy, semana, mes y año, cobros, comparativas y centros.
 - Biblioteca de 69 apartados de informes; 28 disponibles con fechas y CSV.

@@ -8,7 +8,7 @@ const managementGroups={
 'Precios y cobro':['Impuestos','Formas de pago','Centros de venta','Tarifas','Promociones','Descuentos'],
 'Preparación':['Plantillas de comandas','Notas de preparación','Motivos de cancelación','Tipos de preparación','Órdenes de preparación','Monitores de cocina'],
 'Entradas':['Plantillas de entradas','Entradas']};
-const managementRoutes={'Usuarios':'users','Productos':'catalog','Categorías':'categories','Familias':'families','Centros de venta':'settings','Perfiles de usuario':'profiles','Impuestos':'taxes','Formas de pago':'methods','Tipos de preparación':'prep','Órdenes de preparación':'courses','Monitores de cocina':'monitors'};
+const managementRoutes={'Empresa':'company','Usuarios':'users','Productos':'catalog','Categorías':'categories','Familias':'families','Centros de venta':'settings','Perfiles de usuario':'profiles','Impuestos':'taxes','Formas de pago':'methods','Tipos de preparación':'prep','Órdenes de preparación':'courses','Monitores de cocina':'monitors'};
 const managementDescriptions={'Empresa':'Identidad, dirección y datos del negocio.','Series':'Numeración de documentos y series.','Locales':'Establecimientos vinculados a los puestos.','Plantillas de ticket':'Diseño y contenido de documentos impresos.','Plantillas de etiquetas':'Formatos para etiquetado de productos.','Grupos de periodos de servicio':'Franjas y turnos del servicio.','Tipos de clientes':'Clasificación de clientes.','Clientes':'Fichas y vinculación de ventas a clientes.','Grupos de puntos de venta':'Agrupación de terminales.','Puntos de venta':'Registro y conexión de terminales.','Administración web':'Acceso remoto; actualmente solo funciona en este equipo.','Grupos mayores':'Un nivel adicional de agrupación de familias.','Menús':'Composición y elecciones de menús.','Alérgenos':'Asignación de alérgenos a productos.','Etiquetas de productos':'Clasificación mediante etiquetas.','Tarifas':'Precios alternativos por centro y servicio.','Promociones':'Reglas promocionales aplicadas al vender.','Descuentos':'Reglas y permisos para descuentos.','Plantillas de comandas':'Diseño de comandas para impresoras.','Notas de preparación':'Listado reutilizable de notas; actualmente se escribe una nota libre por línea en el TPV.','Motivos de cancelación':'Motivos y registro de anulaciones.','Plantillas de entradas':'Plantillas reutilizables para recepciones de mercancía.','Entradas':'Emisión y control de entradas.'};
 function adminBack(label='Administración'){return `<button class="button secondary" data-admin-back>← ${esc(label)}</button>`}
 function metric(label,value,sub){return `<article class="insight-metric"><span>${esc(label)}</span><strong>${value}</strong><small>${esc(sub)}</small></article>`}
@@ -29,8 +29,40 @@ managementRoutes['Entradas']='inventory';
 managementGroups['Almacén']=['Proveedores','Artículos de almacén','Movimientos de mercancía'];
 managementRoutes['Proveedores']='inventory';managementRoutes['Artículos de almacén']='inventory';managementRoutes['Movimientos de mercancía']='inventory';
 const originalOpenModule=openManagementModule;
-openManagementModule=function(name){if(managementRoutes[name]==='inventory'){renderInventory();return}originalOpenModule(name)};
+openManagementModule=function(name){if(managementRoutes[name]==='company'){go('company');return}if(managementRoutes[name]==='inventory'){renderInventory();return}originalOpenModule(name)};
 let inventoryData=null;
+let companyRequest=0;
+async function renderCompany(){
+    const request=++companyRequest;
+    $('#main').innerHTML='<div class="loading-panel">Cargando empresa…</div>';
+    try{
+        const data=await api('company');
+        if(view!=='company'||request!==companyRequest)return;
+        const field=(key,label,max,type='text')=>`<label for="company-${key}">${label}<input id="company-${key}" name="${key}" type="${type}" maxlength="${max}" value="${esc(data[key])}"></label>`;
+        $('#main').innerHTML=`${adminBack()}<div class="section-title"><div><h2>Empresa</h2><p>Datos administrativos, ubicación y contacto de tu negocio.</p></div></div>
+        <form id="company-form"><div class="company-grid"><div class="company-left">
+        <fieldset class="panel company-section"><legend>Datos administrativos</legend>${field('legal_name','Nombre Fiscal:',160)}${field('trade_name','Nombre Comercial:',160)}${field('tax_id','CIF:',32)}</fieldset>
+        <fieldset class="panel company-section"><legend>Ubicación</legend>${field('address','Dirección:',240)}${field('city','Población:',120)}${field('province','Provincia:',120)}${field('postal_code','Código Postal:',20)}</fieldset></div>
+        <fieldset class="panel company-section"><legend>Contacto</legend>${field('contact','Contacto:',160)}${field('phone','Teléfono:',40,'tel')}${field('email','Email:',254,'email')}${field('website','Página Web:',240)}</fieldset></div>
+        <p id="company-error" class="inline-error" role="alert"></p><div class="panel company-actions"><button class="button primary" type="submit">Aceptar</button><button class="button secondary" type="button" id="company-cancel">Cancelar</button></div></form>`;
+        $('#company-cancel').onclick=()=>go('manage');
+        $('#company-form').onsubmit=async event=>{
+            event.preventDefault();
+            const form=event.currentTarget;
+            const values=Object.fromEntries(new FormData(form));
+            form.querySelectorAll('button').forEach(b=>b.disabled=true);
+            $('#company-error').textContent='';
+            try{
+                await api('company',values);
+                if(view==='company'&&form.isConnected)go('manage');
+                toast('Datos de empresa guardados');
+            }catch(error){
+                if(form.isConnected){$('#company-error').textContent=error.message;form.querySelectorAll('button').forEach(b=>b.disabled=false)}
+                else toast(error.message,true);
+            }
+        };
+    }catch(error){if(view==='company'&&request===companyRequest)$('#main').innerHTML=adminBack()+empty('No se pudo cargar la empresa',error.message)}
+}
 async function renderInventory(){view='manage';$('#main').innerHTML='<div class="loading-panel">Consultando el almacén…</div>';try{const data=await api('inventory');if(view!=='manage')return;inventoryData=data;$('#main').innerHTML=`${adminBack()}<div class="section-title"><div><span class="eyebrow">MERCANCÍAS</span><h2>Entradas y control de existencias</h2><p>Artículos de almacén independientes de los productos de venta.</p></div></div><p class="report-note">Registro manual: las ventas del TPV todavía no descuentan existencias. Las salidas y mermas se registran aquí. Cantidades con hasta tres decimales.</p><div class="report-controls"><button class="button primary" id="receive-goods">+ Recibir mercancía</button><button class="button secondary" id="stock-out">Salida / merma</button><button class="button secondary" id="stock-item">+ Artículo</button><button class="button secondary" id="supplier">+ Proveedor</button><button class="button secondary" id="inventory-refresh">Actualizar</button></div><section class="insight-panel"><h2>Existencias registradas</h2>${reportTable({columns:[['Artículo','text'],['Unidad','text'],['Cantidad','number']],rows:data.items.map(i=>[i.name,i.unit,i.balance/1000])})}</section><section class="insight-panel"><h2>Proveedores</h2><div class="directory-grid">${data.suppliers.map(s=>`<button class="directory-tile" data-supplier="${s.id}"><strong>${esc(s.name)}</strong><span>${esc(s.tax_id)}</span><span>${esc(s.contact)} · Editar →</span></button>`).join('')||'Todavía no hay proveedores.'}</div></section><section class="insight-panel"><h2>Últimos movimientos</h2><p>Hasta 200 operaciones. Consulta el histórico completo en Informes.</p>${reportTable({columns:[['Fecha','text'],['Artículo','text'],['Tipo','text'],['Cantidad','number'],['Unidad','text'],['Importe','money'],['Referencia','text']],rows:data.moves.map(m=>[m.created,m.name,{receipt:'ENTRADA',out:'SALIDA',waste:'MERMA'}[m.kind],m.qty/1000,m.unit,m.total,m.reference])})}</section>`;$('#supplier').onclick=()=>supplierDialog();$('#stock-item').onclick=stockItemDialog;$('#receive-goods').onclick=()=>stockMoveDialog('receipt');$('#stock-out').onclick=()=>stockMoveDialog('out');$('#inventory-refresh').onclick=renderInventory;document.querySelectorAll('[data-supplier]').forEach(b=>b.onclick=()=>supplierDialog(Number(b.dataset.supplier)))}catch(e){toast(e.message,true)}}
 async function inventorySave(action,data,button){button.disabled=true;try{await api(action,data);closeModal();await renderInventory();toast('Registro guardado')}catch(e){toast(e.message,true);if(button.isConnected)button.disabled=false}}
 function supplierDialog(id){const s=inventoryData.suppliers.find(s=>s.id===id)||{};openModal(modalTitle(id?'Editar proveedor':'Nuevo proveedor')+`<form id="supplier-form"><div class="form-grid"><label class="full">NOMBRE<input id="supplier-name" value="${esc(s.name||'')}" required maxlength="120"></label><label>NIF / IDENTIFICACIÓN<input id="supplier-tax" value="${esc(s.tax_id||'')}" maxlength="40"></label><label>CONTACTO<input id="supplier-contact" value="${esc(s.contact||'')}" maxlength="200"></label></div><div class="form-actions"><button class="button primary">Guardar proveedor</button></div></form>`);$('#supplier-form').onsubmit=e=>{e.preventDefault();inventorySave('supplier',{id,name:$('#supplier-name').value,tax_id:$('#supplier-tax').value,contact:$('#supplier-contact').value},e.submitter)}}

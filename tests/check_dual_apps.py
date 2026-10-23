@@ -63,9 +63,16 @@ with tempfile.TemporaryDirectory() as tmp:
         for client in (tpv,admin):
             assert 'pin_hash' not in json.dumps(client.request('access'))
             client.request('state',status=401)
+            client.request('company',status=401)
+            client.request('company',{'legal_name':'BLOCKED'},status=401)
             client.request('open',{'direct':True},status=401)
             client.request('login',{'user_id':1,'pin':'0000'},status=400)
         admin.login();assert len(admin.request('analytics/dashboard')['cards'])==4
+        assert admin.request('company')['legal_name']==''
+        admin.request('company',{'legal_name':'EMPRESA QA','postal_code':'01001'})
+        assert admin.request('company')['postal_code']=='01001'
+        admin.request('company',{'email':'invalid'},status=400)
+        assert admin.request('company')['legal_name']=='EMPRESA QA'
         assert len(admin.request('analytics/catalog'))>50
         admin.request('supplier',{'name':'PROVEEDOR QA'})
         admin.request('stock_item',{'name':'HARINA QA','unit':'KG'})
@@ -79,6 +86,8 @@ with tempfile.TemporaryDirectory() as tmp:
         tpv.login(ana['id'],'4567')
         tpv.request('analytics/dashboard',status=403)
         tpv.request('inventory',status=403)
+        tpv.request('company',status=403)
+        tpv.request('company',{'legal_name':'BLOCKED'},status=403)
         tpv.request('product',{'name':'BLOCKED'},status=403)
         tpv.request('open',{'direct':True},csrf=False,status=403)
         tpv.request('open',{},status=400)
