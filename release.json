@@ -1,9 +1,9 @@
 {
-  "version": "0.4",
+  "version": "0.5",
   "name": "Marchan2",
   "repository": "https://github.com/marchan2soporte/Marchan2Pedro",
-  "portable_directory": "Marchan2_v0.4",
-  "portable_filename": "Marchan2_v0.4_Windows.zip",
+  "portable_directory": "Marchan2_v0.5",
+  "portable_filename": "Marchan2_v0.5_Windows.zip",
   "python": "3.14",
   "validation": {
     "unit_tests": 34,
