@@ -1,4 +1,8 @@
-# Alcance funcional de Marchan2 0.13
+# Alcance funcional de Marchan2 0.14
+
+Administración → Puntos de venta permite mantener varios perfiles y activar uno para este TPV local. El perfil activo determina permisos de cobro, preparación automática de líneas nuevas, búsqueda inicial de productos, visualización de última venta y plantilla del ticket de prueba. El saldo inicial se usa como referencia en el resumen diario de efectivo, sin constituir un arqueo de caja. Los perfiles no representan terminales de red independientes.
+
+Puede guardarse la dirección o el nombre de una impresora de red y el puerto COM de una balanza. Esos datos no conectan aún los dispositivos: los tickets de prueba se imprimen mediante el diálogo de Windows y la balanza necesita un protocolo/modelo concreto para leer pesos. Los informes Z, la impresión directa por tipo de documento, los visores externos y las opciones avanzadas de la captura de referencia siguen pendientes.
 
 Administración → Empresa permite guardar nombre fiscal, nombre comercial, CIF, dirección, población, provincia, código postal, contacto, teléfono, email y página web. Aceptar guarda la ficha local; Cancelar descarta la edición. Nombre comercial o fiscal, CIF y dirección aparecen en el detalle imprimible de prueba.
 

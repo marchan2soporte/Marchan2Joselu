@@ -126,6 +126,8 @@ class LegacyStore:
                 oid=c.execute('INSERT INTO orders(table_id,created,created_by) VALUES(?,?,?)',(table,datetime.now().isoformat(timespec='seconds'),actor)).lastrowid
                 return {'order_id':oid}
             if action=='add':
+                from pos_profiles import active_options
+                auto_prepare=active_options(c)['auto_prepare']
                 self.require_open(c,data['order_id'])
                 row=c.execute('SELECT f.*,p.name product_name,p.tax,p.prep,p.course,p.addon_group FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1',(data['format_id'],)).fetchone()
                 if not row:raise ValueError('El formato ya no está disponible.')
@@ -144,12 +146,12 @@ class LegacyStore:
                 preferences=json.loads(settings_row['value']).get('preferences',{}) if settings_row else {}
                 consolidate=preferences.get('consolidate_lines',True)
                 same=c.execute("SELECT id,qty FROM lines WHERE order_id=? AND format_id=? AND price=? AND tax=? AND extras=? AND note=? AND course=? AND kitchen='new' ORDER BY id DESC LIMIT 1",
-                               (data['order_id'],row['id'],price,row['tax'],extra_json,note,row['course'])).fetchone() if consolidate else None
+                               (data['order_id'],row['id'],price,row['tax'],extra_json,note,row['course'])).fetchone() if consolidate and not auto_prepare else None
                 if same and same['qty']+qty<=100:
                     c.execute('UPDATE lines SET qty=qty+? WHERE id=?',(qty,same['id']))
                     return {'line_id':same['id']}
-                lid=c.execute('INSERT INTO lines(order_id,product_id,format_id,name,format,price,qty,tax,extras,note,prep,course) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-                          (data['order_id'],row['product_id'],row['id'],row['product_name'],row['name'],price,qty,row['tax'],extra_json,note,row['prep'],row['course'])).lastrowid
+                lid=c.execute('INSERT INTO lines(order_id,product_id,format_id,name,format,price,qty,tax,extras,note,prep,course,kitchen) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                          (data['order_id'],row['product_id'],row['id'],row['product_name'],row['name'],price,qty,row['tax'],extra_json,note,row['prep'],row['course'],'pending' if auto_prepare else 'new')).lastrowid
                 return {'line_id':lid}
             elif action=='quantity':
                 row=c.execute('SELECT * FROM lines WHERE id=?',(data['line_id'],)).fetchone()

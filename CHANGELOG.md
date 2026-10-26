@@ -1,5 +1,10 @@
 # Cambios de Marchan2
 
+## 0.14
+- Nuevo apartado «Puntos de venta» con perfiles locales: crear, copiar, editar, activar y eliminar perfiles inactivos.
+- El perfil activo controla cobros (también en el servidor), preparación automática, vista de búsqueda, última venta y plantilla de ticket de prueba. El saldo inicial de referencia aparece en el resumen de efectivo.
+- Se pueden registrar la dirección o nombre de una impresora de red y un puerto COM para una futura conexión. La impresión actual se hace desde Windows; la lectura de balanza requiere el protocolo del modelo elegido.
+
 ## 0.13
 - Editor de plantillas de ticket rediseñado con identidad visual propia, selector de anchuras de papel, vista previa en vivo y opciones de contenido.
 - Cabecera y pie admiten imágenes PNG/JPEG pequeñas guardadas localmente. Las opciones de orden de productos, notas, precio unitario, IVA por línea, propinas, aviso de pendiente e identificación se aplican al recibo de prueba del TPV.

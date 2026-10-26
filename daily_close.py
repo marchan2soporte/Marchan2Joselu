@@ -3,12 +3,14 @@ from collections import defaultdict
 from datetime import date
 
 import global_config
+import pos_profiles
 
 
 def preview(store, day=None):
     day = day or date.today().isoformat()
     date.fromisoformat(day)
     flags = global_config.read(store)['preferences']
+    opening_float = (pos_profiles.active(store) or {'options': {}})['options'].get('opening_float', 0)
     with store.db() as c:
         closed = [dict(r) for r in c.execute('''SELECT o.id,o.total,o.created_by,
             COALESCE(ce.name,'VENTA DIRECTA') center,COALESCE(u.name,'SIN USUARIO') user
@@ -61,7 +63,8 @@ def preview(store, day=None):
     if flags['include_cash_balance']:
         cash = sum(p['amount'] for p in payments if p['method'] == 'cash')
         sections.append({'title': 'Efectivo registrado', 'columns': ['Concepto', 'Importe'],
-                         'rows': [['Cobros en efectivo', cash]]})
+                         'rows': [['Saldo inicial de referencia', opening_float],
+                                  ['Cobros en efectivo', cash], ['Total teórico', opening_float + cash]]})
     if flags['include_tips']:
         tips = defaultdict(int)
         for payment in payments:

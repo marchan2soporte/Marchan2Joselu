@@ -52,6 +52,8 @@ class WorkflowMixin:
                 c.execute('PRAGMA user_version=2')
             if 'tip' not in [r['name'] for r in c.execute('PRAGMA table_info(payments)')]:
                 c.execute('ALTER TABLE payments ADD COLUMN tip INTEGER NOT NULL DEFAULT 0')
+        from pos_profiles import initialize as initialize_pos_profiles
+        initialize_pos_profiles(self)
 
     def users(self,active_only=True):
         with self.db() as c:
@@ -92,6 +94,9 @@ class WorkflowMixin:
 
     def take_payment(self,c,order,data,actor,amount=None):
         from store import money
+        from pos_profiles import active_options
+        if not active_options(c)['allow_pay']:
+            raise ValueError('Los cobros están desactivados en el punto de venta activo.')
         if not order['lines']:raise ValueError('La cuenta está vacía.')
         if int(data['expected_total'])!=order['total'] or int(data.get('expected_due',order['due']))!=order['due']:
             raise ValueError('La cuenta ha cambiado. Vuelve a abrir Pagos.')
