@@ -32,6 +32,13 @@ class WorkflowMixin:
                 finally:target.close()
         with self.db() as c:
             c.execute('BEGIN IMMEDIATE')
+            c.execute('''CREATE TABLE IF NOT EXISTS line_cancellations(
+                id INTEGER PRIMARY KEY,order_id INTEGER NOT NULL,line_id INTEGER NOT NULL,
+                name TEXT NOT NULL,qty INTEGER NOT NULL,reason TEXT NOT NULL,
+                user_id INTEGER,created TEXT NOT NULL)''')
+            for column, kind in [('series_id','INTEGER'),('series_number','INTEGER'),('series_name','TEXT')]:
+                if column not in [r['name'] for r in c.execute('PRAGMA table_info(orders)')]:
+                    c.execute(f'ALTER TABLE orders ADD COLUMN {column} {kind}')
             if c.execute('PRAGMA user_version').fetchone()[0]<2:
                 c.execute('CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY,name TEXT UNIQUE NOT NULL,pin_hash TEXT NOT NULL,role TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1)')
                 c.execute('CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id),amount INTEGER NOT NULL,method TEXT NOT NULL,tendered INTEGER NOT NULL,change_due INTEGER NOT NULL,created TEXT NOT NULL,user_id INTEGER REFERENCES users(id),request_id TEXT UNIQUE)')
@@ -100,10 +107,18 @@ class WorkflowMixin:
         if paid==order['total']:
             methods={r[0] for r in c.execute('SELECT method FROM payments WHERE order_id=?',(order['id'],))}
             c.execute("UPDATE orders SET status='paid',paid_at=?,payment=?,total=?,tendered=?,change_due=? WHERE id=?",(now,method if len(methods)==1 else 'mixed',order['total'],tendered,tendered-amount,order['id']))
+            settings=c.execute("SELECT value FROM settings WHERE key='global_config'").fetchone()
+            selected=json.loads(settings['value']).get('pos_series',{}).get('Fra. Simp.') if settings else None
+            if selected:
+                series=c.execute("SELECT id,name,next_number FROM document_series WHERE id=? AND type='Fra. Simp.' AND active=1",(selected,)).fetchone()
+                if series:
+                    c.execute('UPDATE orders SET series_id=?,series_number=?,series_name=? WHERE id=?',
+                              (series['id'],series['next_number'],series['name'],order['id']))
+                    c.execute('UPDATE document_series SET next_number=next_number+1 WHERE id=?',(series['id'],))
         return {'receipt':self.order(c,order['id']),'paid_now':amount,'change':tendered-amount}
 
     def mutate(self,action,data,actor=None):
-        extended={'pay','split_pay','march','course','note','move','user','user_disable'}
+        extended={'pay','split_pay','march','course','note','move','cancel_line','user','user_disable'}
         if action not in extended:return super().mutate(action,data,actor)
         with self.db() as c:
             c.execute('BEGIN IMMEDIATE')
@@ -130,6 +145,21 @@ class WorkflowMixin:
                     else:c.execute('INSERT INTO users(name,pin_hash,role) VALUES(?,?,?)',(name,hashed,role))
                 return {'ok':True}
             order=self.require_open(c,data['order_id'])
+            if action=='cancel_line':
+                if order['paid']:raise ValueError('La cuenta tiene pagos parciales. No se puede cancelar esta línea.')
+                line_id=int(data['line_id'])
+                target=next((row for row in order['lines'] if row['id']==line_id),None)
+                if not target:raise ValueError('La línea no pertenece a esta cuenta.')
+                settings=c.execute("SELECT value FROM settings WHERE key='global_config'").fetchone()
+                prefs=json.loads(settings['value']).get('preferences',{}) if settings else {}
+                reason=str(data.get('reason','')).strip()
+                if target['kitchen']!='new' and prefs.get('cancel_reason') and not reason:
+                    raise ValueError('Indica el motivo de cancelación.')
+                if len(reason)>300:raise ValueError('El motivo es demasiado largo.')
+                c.execute('INSERT INTO line_cancellations(order_id,line_id,name,qty,reason,user_id,created) VALUES(?,?,?,?,?,?,?)',
+                          (order['id'],line_id,target['name'],target['qty'],reason,actor,datetime.now().isoformat(timespec='seconds')))
+                c.execute('DELETE FROM lines WHERE id=?',(line_id,))
+                return {'ok':True}
             if action=='pay':
                 return self.take_payment(c,order,data,actor,data.get('amount'))
             if action=='split_pay':

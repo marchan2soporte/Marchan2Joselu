@@ -1,6 +1,8 @@
 # Cambios de Marchan2
 
-## Pendiente de versión
+## 0.11
+- TPV: aviso de stock mínimo, cancelación auditada con motivo configurable y referencia interna consecutiva de la serie asignada al cerrar una cuenta de prueba.
+- Conexión inicial Administración/TPV: datos de Empresa en el ticket de prueba y consolidación de líneas controlada por Configuración global.
 - Configuración global: formulario completo de preferencias guardadas para futuras funciones, con estado visible de lo que aún no afecta al TPV.
 - Plantillas de ticket: editor con vista previa y aplicación de la plantilla predeterminada al detalle imprimible de las cuentas de prueba.
 - Configuración global sustituye Locales y permite preparar la asignación de series; las demás opciones de la referencia indican su estado pendiente.

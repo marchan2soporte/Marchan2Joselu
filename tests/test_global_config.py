@@ -37,3 +37,62 @@ class GlobalConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 global_config.save(store, payload)
             self.assertEqual(global_config.read(store), saved)
+
+    def test_consolidation_setting_changes_tpv_line_behavior(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp) / 'test.db')
+            series.initialize(store)
+            order_id = store.mutate('open', {'direct': True})['order_id']
+            product = next(p for p in store.state()['products'] if p['formats'])
+            format_id = product['formats'][0]['id']
+            store.mutate('add', {'order_id': order_id, 'format_id': format_id})
+            store.mutate('add', {'order_id': order_id, 'format_id': format_id})
+            self.assertEqual(len(store.state()['orders'][0]['lines']), 1)
+            settings = global_config.read(store)
+            settings['preferences']['consolidate_lines'] = False
+            global_config.save(store, settings)
+            store.mutate('add', {'order_id': order_id, 'format_id': format_id})
+            self.assertEqual(len(store.state()['orders'][0]['lines']), 2)
+
+    def test_prepared_line_requires_reason_when_configured(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp) / 'test.db')
+            series.initialize(store)
+            settings = global_config.read(store)
+            settings['preferences']['cancel_reason'] = True
+            global_config.save(store, settings)
+            order_id = store.mutate('open', {'direct': True})['order_id']
+            format_id = store.state()['products'][0]['formats'][0]['id']
+            store.mutate('add', {'order_id': order_id, 'format_id': format_id})
+            line_id = store.state()['orders'][0]['lines'][0]['id']
+            store.mutate('send', {'order_id': order_id})
+            with self.assertRaises(ValueError):
+                store.mutate('cancel_line', {'order_id': order_id, 'line_id': line_id})
+            store.mutate('cancel_line', {'order_id': order_id, 'line_id': line_id,
+                                         'reason': 'Cliente cambia pedido'})
+            self.assertEqual(store.state()['orders'][0]['lines'], [])
+            with store.db() as c:
+                self.assertEqual(c.execute('SELECT reason FROM line_cancellations').fetchone()[0],
+                                 'Cliente cambia pedido')
+
+    def test_paid_test_receipts_get_unique_internal_series_reference(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp) / 'test.db')
+            series.initialize(store)
+            identity = series.save(store, {'name': 'T', 'type': 'Fra. Simp.',
+                                           'next_number': 12})['id']
+            settings = global_config.read(store)
+            settings['pos_series']['Fra. Simp.'] = identity
+            global_config.save(store, settings)
+            format_id = store.state()['products'][0]['formats'][0]['id']
+            numbers = []
+            for index in range(2):
+                order_id = store.mutate('open', {'direct': True}, actor=1)['order_id']
+                store.mutate('add', {'order_id': order_id, 'format_id': format_id}, actor=1)
+                order = store.state()['orders'][0]
+                result = store.mutate('pay', {'order_id': order_id,
+                    'expected_total': order['total'], 'expected_due': order['due'],
+                    'payment': 'card', 'request_id': str(index)}, actor=1)
+                numbers.append(result['receipt']['series_number'])
+            self.assertEqual(numbers, [12, 13])
+            self.assertEqual(series.list_all(store)[0]['next_number'], 14)

@@ -19,7 +19,7 @@ import threading
 import webbrowser
 from store import Store
 
-TPV_ACTIONS={'open','add','quantity','send','march','course','note','move','pay','split_pay','ready','close_empty'}
+TPV_ACTIONS={'open','add','quantity','send','march','course','note','move','pay','split_pay','ready','close_empty','cancel_line'}
 ADMIN_ACTIONS={'product','category','center','user','user_disable'}
 
 
@@ -76,7 +76,7 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.10'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.11'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -103,6 +103,11 @@ def main(default_app='tpv'):
                     return self.reply(404,{'error':'Informe no encontrado.'})
                 if path=='/api/state':
                     data=store.state();data['user']=user;data['ticket_template']=ticket_templates.current(store)
+                    data['company']=company.read(store)
+                    data['global_config']=global_config.read(store)
+                    if args.app=='tpv' and data['global_config']['preferences']['stock_warning']:
+                        data['stock_warnings']=[{'name':i['name'],'unit':i['unit'],'balance':i['balance'],'minimum':i['minimum']}
+                            for i in inventory.state(store)['items'] if i['minimum'] and i['balance']<i['minimum']]
                     if args.app=='tpv':
                         for key in ('stats','history','payment_history'):data.pop(key,None)
                     else:data['users']=store.users(False)

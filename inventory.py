@@ -7,6 +7,8 @@ def initialize(store):
   c.executescript('''CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE,tax_id TEXT NOT NULL DEFAULT '',contact TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS stock_items(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE,unit TEXT NOT NULL DEFAULT 'UD');
 CREATE TABLE IF NOT EXISTS stock_moves(id INTEGER PRIMARY KEY,item_id INTEGER NOT NULL REFERENCES stock_items(id),supplier_id INTEGER REFERENCES suppliers(id),qty INTEGER NOT NULL,cost INTEGER NOT NULL,total INTEGER NOT NULL,kind TEXT NOT NULL,reference TEXT NOT NULL DEFAULT '',created TEXT NOT NULL,user_id INTEGER REFERENCES users(id),request_id TEXT NOT NULL UNIQUE);''')
+  if 'minimum' not in [r['name'] for r in c.execute('PRAGMA table_info(stock_items)')]:
+   c.execute('ALTER TABLE stock_items ADD COLUMN minimum INTEGER NOT NULL DEFAULT 0')
 
 def quantity(value):
  try:
@@ -33,7 +35,13 @@ def mutate(store,action,data,actor):
     if not c.execute('SELECT 1 FROM suppliers WHERE id=?',(data['id'],)).fetchone():raise ValueError('Proveedor inexistente.')
     c.execute('UPDATE suppliers SET name=?,tax_id=?,contact=? WHERE id=?',(name,tax_id,contact,data['id']))
    else:c.execute('INSERT INTO suppliers(name,tax_id,contact) VALUES(?,?,?)',(name,tax_id,contact))
-  elif action=='stock_item':c.execute('INSERT INTO stock_items(name,unit) VALUES(?,?)',(title(data.get('name')),title(data.get('unit','UD'))))
+  elif action=='stock_item':
+   minimum=0 if not data.get('minimum') else quantity(data['minimum'])
+   name=title(data.get('name'));unit=title(data.get('unit','UD'))
+   if data.get('id'):
+    if not c.execute('SELECT 1 FROM stock_items WHERE id=?',(data['id'],)).fetchone():raise ValueError('Artículo inexistente.')
+    c.execute('UPDATE stock_items SET name=?,unit=?,minimum=? WHERE id=?',(name,unit,minimum,data['id']))
+   else:c.execute('INSERT INTO stock_items(name,unit,minimum) VALUES(?,?,?)',(name,unit,minimum))
   elif action=='stock_move':
    kind=data.get('kind');item=int(data['item_id']);qty=quantity(data.get('qty'));request=str(data.get('request_id',''))
    if not request or len(request)>100:raise ValueError('Falta el identificador de operación.')

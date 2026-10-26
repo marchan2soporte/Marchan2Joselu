@@ -19,7 +19,7 @@ CHOICES = {
 
 
 def defaults():
-    return {**{key: False for key in BOOL_OPTIONS},
+    return {**{key: key == 'consolidate_lines' for key in BOOL_OPTIONS},
             **{key: values[0] for key, values in CHOICES.items()},
             'service_charge_percent': '0', 'simplified_invoice_limit': '',
             'service_charge_tax': 'Exento'}

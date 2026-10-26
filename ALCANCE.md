@@ -1,12 +1,16 @@
 # Estado de los informes de Marchan2 0.3
 
-Administración → Empresa permite guardar nombre fiscal, nombre comercial, CIF, dirección, población, provincia, código postal, contacto, teléfono, email y página web. Aceptar guarda la ficha local; Cancelar descarta la edición. Estos datos todavía no se incorporan a los tickets.
+Administración → Empresa permite guardar nombre fiscal, nombre comercial, CIF, dirección, población, provincia, código postal, contacto, teléfono, email y página web. Aceptar guarda la ficha local; Cancelar descarta la edición. Nombre comercial o fiscal, CIF y dirección aparecen en el detalle imprimible de prueba.
 
-Administración → Series permite crear, buscar, copiar, editar y eliminar series de documentos con tipo, siguiente número y estado. Es configuración local; la numeración todavía no se aplica a tickets ni otros documentos.
+Administración → Series permite crear, buscar, copiar, editar y eliminar series de documentos con tipo, siguiente número y estado. La serie de «Fra. Simp.» asignada en Configuración global crea una referencia interna consecutiva en cuentas cobradas de prueba; no es numeración fiscal.
 
-Administración → Configuración global sustituye la tarjeta Locales. Permite guardar asignaciones de series activas por tipo de documento para el punto de venta. El TPV todavía no consume esas asignaciones. Las opciones de stock, impresión, propinas, recargos, pedidos, cierre y administración web se muestran como pendientes sin controles que aparenten estar operativos.
+Administración → Configuración global sustituye la tarjeta Locales. Permite guardar asignaciones de series activas por tipo de documento para el punto de venta. La asignación de «Fra. Simp.» se usa solo como referencia interna en cuentas de prueba.
 
-El formulario completo de Configuración global guarda además preferencias de stock, operativa de venta, comandas, propinas, recargo, pedidos, cierre y administración web. Estos controles están identificados como preferencias para próximas funciones y todavía no cambian la operación del TPV. Scan & Pay y pedido en mesa solo ofrecen el valor Desactivado hasta que existan esos módulos.
+El formulario completo de Configuración global guarda además preferencias de stock, operativa de venta, comandas, propinas, recargo, pedidos, cierre y administración web. La mayoría se identifica como preferencias para próximas funciones; la consolidación de líneas sí se aplica en el TPV. Scan & Pay y pedido en mesa solo ofrecen el valor Desactivado hasta que existan esos módulos.
+
+Conexión progresiva con TPV: Empresa aparece en el detalle imprimible de prueba (nombre comercial o fiscal, CIF y dirección); Consolidar líneas al vender ya controla si las nuevas líneas iguales se agrupan. La aplicación no emite facturas fiscales.
+
+También están conectados al TPV: aviso cuando un artículo de almacén con mínimo configurado está por debajo de él; motivo obligatorio al cancelar una línea enviada a preparación cuando se activa esa opción; y referencia interna consecutiva de la serie «Fra. Simp.» al cobrar una cuenta completa. Las ventas siguen sin descontar existencias y la referencia interna no constituye factura ni numeración fiscal. Redsys, facturación legal, recargos, propinas, pedidos remotos y cierre automático requieren módulos adicionales y no se activan con las preferencias guardadas.
 
 Administración → Plantillas de ticket permite crear, copiar, editar y eliminar diseños de prueba, elegir formato 80 mm o A4, cabecera, pie y visibilidad de hora, usuario e IVA orientativo. La plantilla predeterminada se aplica al detalle imprimible de las cuentas en TPV y Administración. La vista previa usa datos ficticios. No se generan facturas fiscales, códigos QR ni salida directa a una impresora configurada.
 

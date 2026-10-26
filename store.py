@@ -140,8 +140,11 @@ class LegacyStore:
                     extras.append(dict(e))
                 price=row['price']+sum(e['price'] for e in extras)
                 note=str(data.get('note',''))[:300];extra_json=json.dumps(extras)
+                settings_row=c.execute("SELECT value FROM settings WHERE key='global_config'").fetchone()
+                preferences=json.loads(settings_row['value']).get('preferences',{}) if settings_row else {}
+                consolidate=preferences.get('consolidate_lines',True)
                 same=c.execute("SELECT id,qty FROM lines WHERE order_id=? AND format_id=? AND price=? AND tax=? AND extras=? AND note=? AND course=? AND kitchen='new' ORDER BY id DESC LIMIT 1",
-                               (data['order_id'],row['id'],price,row['tax'],extra_json,note,row['course'])).fetchone()
+                               (data['order_id'],row['id'],price,row['tax'],extra_json,note,row['course'])).fetchone() if consolidate else None
                 if same and same['qty']+qty<=100:
                     c.execute('UPDATE lines SET qty=qty+? WHERE id=?',(qty,same['id']))
                     return {'line_id':same['id']}

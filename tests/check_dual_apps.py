@@ -18,7 +18,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--frozen',action='store_tr
 class Client:
     def __init__(self,app,folder):
         name='Marchan2_TPV.exe' if app=='tpv' else 'Marchan2_Administracion.exe'
-        command=[str(root/'dist/Marchan2_v0.10'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
+        command=[str(root/'dist/Marchan2_v0.11'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
@@ -85,11 +85,12 @@ with tempfile.TemporaryDirectory() as tmp:
         assert admin.request('company')['legal_name']==''
         admin.request('company',{'legal_name':'EMPRESA QA','postal_code':'01001'})
         assert admin.request('company')['postal_code']=='01001'
+        assert admin.request('state')['company']['legal_name']=='EMPRESA QA'
         admin.request('company',{'email':'invalid'},status=400)
         assert admin.request('company')['legal_name']=='EMPRESA QA'
         assert len(admin.request('analytics/catalog'))>50
         admin.request('supplier',{'name':'PROVEEDOR QA'})
-        admin.request('stock_item',{'name':'HARINA QA','unit':'KG'})
+        admin.request('stock_item',{'name':'HARINA QA','unit':'KG','minimum':'2'})
         admin.request('stock_move',{'item_id':1,'supplier_id':1,'qty':'1.250','cost':'2.40','kind':'receipt','request_id':'stock-qa','reference':'QA'})
         assert admin.request('inventory')['items'][0]['balance']==1250
         assert admin.request('analytics/dashboard')['stock']['current']==300
@@ -104,6 +105,7 @@ with tempfile.TemporaryDirectory() as tmp:
         tpv.request('series',status=403)
         tpv.request('global_config',status=403)
         assert tpv.request('state')['ticket_template']['header']=='Cabecera QA'
+        assert tpv.request('state')['global_config']['preferences']['stock_warning']
         tpv.request('ticket_templates',status=403)
         tpv.request('ticket_template_save',{'name':'BLOCKED'},status=403)
         tpv.request('series_save',{'name':'BLOCKED'},status=403)
@@ -112,6 +114,8 @@ with tempfile.TemporaryDirectory() as tmp:
         tpv.request('open',{'direct':True},csrf=False,status=403)
         tpv.request('open',{},status=400)
         state=tpv.request('state');assert not any(k in state for k in ('stats','history','users'))
+        assert state['company']['legal_name']=='EMPRESA QA'
+        assert state['stock_warnings'][0]['name']=='HARINA QA'
         product=next(p for p in state['products'] if p['name']=='JHONNY NEGRO')
         oid=tpv.request('open',{'table_id':1})['order_id']
         for fmt in product['formats']:tpv.request('add',{'order_id':oid,'format_id':fmt['id']})
