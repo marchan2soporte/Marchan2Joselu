@@ -1,6 +1,7 @@
 """Local layouts for Marchan2's non-fiscal test receipts."""
 import base64
 import binascii
+import json
 
 BASES = ('80 mm', '56 mm · 32 caracteres', '80 mm · 42 caracteres',
          '80 mm · 48 caracteres', '80 mm · 56 caracteres',
@@ -43,6 +44,8 @@ def current(store):
 def save(store, data):
     if not isinstance(data, dict):
         raise ValueError('Plantilla no válida.')
+    if type(data.get('apply_to_active_profile', False)) is not bool:
+        raise ValueError('Selección del TPV no válida.')
     name = data.get('name', '')
     if not isinstance(name, str) or not 1 <= len(name.strip()) <= 80:
         raise ValueError('El nombre debe tener entre 1 y 80 caracteres.')
@@ -108,6 +111,13 @@ def save(store, data):
                                  for field, default in PRINT_OPTIONS.items()), identity))
         c.execute('UPDATE ticket_templates SET header_image=?,footer_image=? WHERE id=?',
                   (images['header_image'], images['footer_image'], identity))
+        if data.get('apply_to_active_profile'):
+            active = c.execute('SELECT id,options FROM pos_profiles WHERE active=1 ORDER BY id LIMIT 1').fetchone()
+            if not active:
+                raise ValueError('No hay un punto de venta activo.')
+            options = json.loads(active['options'])
+            options['receipt_template_id'] = identity
+            c.execute('UPDATE pos_profiles SET options=? WHERE id=?', (json.dumps(options), active['id']))
     return {'id': identity}
 
 

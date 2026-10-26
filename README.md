@@ -1,11 +1,11 @@
-# Marchan2 0.17 — JoseluIA
+# Marchan2 0.18 — JoseluIA
 
 ## Abrir
 Extrae TODO el ZIP y conserva _internal junto a los dos ejecutables.
 Cierra las versiones anteriores. Abre Marchan2_Administracion.exe para administrar y Marchan2_TPV.exe para vender. Las interfaces se abren en el navegador y comparten los datos del equipo.
 Primer acceso: ADMIN / PIN 1234. Si ya habías cambiado el PIN, conserva el tuyo.
 En Administración → Puntos de venta puedes configurar varios puestos y activar el que usa este TPV local. Instala primero la impresora de red en Windows para asignarla como cola de tickets o cocina. Si no hay cola asignada, «Ver cuenta» abre el diálogo de impresión de Windows. La IP guardada para el diagnóstico de red no es un destino de impresión. El puerto COM de balanza queda preparado para conectar un modelo con protocolo conocido.
-En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
+En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. El informe Z de prueba se abre desde Mesas en el TPV y sus apartados se eligen en el perfil.
 Windows 10/11 de 64 bits; no requiere instalar Python ni conexión a Internet.
 
@@ -44,7 +44,7 @@ Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de dato
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-57 pruebas automatizadas, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+59 pruebas automatizadas, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
 Fuentes: Python, SQLite y HTML/CSS/JS locales.
 Ejecutar: python tpv.py / python admin.py
 Pruebas: python -m unittest discover -s tests -v
@@ -55,6 +55,6 @@ Ejecutables: python tests/check_dual_apps.py --frozen
 ## Repositorio y próximas actualizaciones
 Repositorio oficial del proyecto: https://github.com/marchan2soporte/Marchan2Pedro.
 Las actualizaciones de este trabajo se guardan aquí mediante commits, con su versión y cambios documentados. Las instrucciones persistentes están en AGENTS.md.
-GitHub comprueba las pruebas en cada push. Los tags de versión (por ejemplo, v0.17) activan la construcción y publicación del ZIP de Windows. También puede construirse manualmente desde Actions > Windows release.
+GitHub comprueba las pruebas en cada push. Los tags de versión (por ejemplo, v0.18) activan la construcción y publicación del ZIP de Windows. También puede construirse manualmente desde Actions > Windows release.
 Los ejecutables se descargan desde Releases; el código fuente se mantiene en el repositorio. Conserva la carpeta _internal al extraer un paquete de Windows.
 No se incluyen bases de datos, clientes, sesiones ni credenciales de los equipos de trabajo.

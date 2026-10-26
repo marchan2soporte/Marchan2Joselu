@@ -183,25 +183,59 @@ def enqueue_kitchen(c, store, order_id, line_ids):
                       (line['id'], route['id'], job))
 
 
-def _format_receipt(order, company, template=None):
+def _format_receipt(order, company, template=None, categories=None):
+    """Text equivalent of the shared browser preview for text-only queues."""
     template = template or {}
-    lines = ['MARCHAN2 · TICKET DE PRUEBA',
-             template.get('header') or company.get('trade_name') or company.get('legal_name') or 'MARCHAN2',
-             'NO FISCAL']
+    show = lambda key, default=1: bool(template.get(key, default))
+    width = 32 if str(template.get('base', '')).startswith('56 mm') else 48
+    separator = '-' * width
+    amount = lambda cents: f'{cents / 100:.2f} EUR'
+    lines = (template.get('header') or company.get('trade_name') or
+             company.get('legal_name') or 'MARCHAN2').splitlines()
     if company.get('tax_id'): lines.append('CIF: ' + company['tax_id'])
     if company.get('address'): lines.append(company['address'])
-    lines.append(f"Cuenta #{order['id']} · {order['table_name'] or 'VENTA DIRECTA'}")
-    if template.get('show_time', 1): lines.append(order['paid_at'] or order['created'])
-    lines.append('-' * 38)
-    items = order['lines']
-    if template.get('line_order') == 'Nombre': items = sorted(items, key=lambda item: item['name'])
-    for line in items:
-        lines.append(f"{line['qty']} x {line['name']}  {line['qty'] * line['price'] / 100:.2f} EUR")
-        if template.get('show_unit_price'): lines.append(f"  {line['price'] / 100:.2f} EUR / unidad")
-        if template.get('show_notes') and line['note']: lines.append('  Nota: ' + line['note'])
-    lines.extend(['-' * 38, f"TOTAL {order['total'] / 100:.2f} EUR",
-                  f"PENDIENTE {order['due'] / 100:.2f} EUR",
-                  template.get('footer') or 'Gracias por su visita'])
+    lines.append('DEMOSTRACIÓN · NO FISCAL')
+    if order.get('series_number'):
+        lines.append(f"Referencia interna: {order.get('series_name') or ''}-{order['series_number']}")
+    identity = []
+    if show('show_order_id'): identity.append(f"Cuenta #{order['id']:04d}")
+    if show('show_location'): identity.append(order['table_name'] or 'VENTA DIRECTA')
+    if identity: lines.append(' · '.join(identity))
+    date = order['paid_at'] or order['created']
+    lines.append(date if show('show_time') else date[:10])
+    if show('show_unpaid') and order['due'] > 0: lines.append('PENDIENTE DE COBRO')
+    lines.append(separator)
+    items = list(order['lines'])
+    if template.get('line_order') == 'Nombre':
+        items.sort(key=lambda item: item['name'].casefold())
+    if template.get('line_order') == 'Categoría' and categories:
+        items.sort(key=lambda item: (categories.get(item['product_id'], '').casefold(), item['id']))
+    taxes = {}
+    for item in items:
+        lines.append(f"{item['qty']} x {item['name']}  {amount(item['qty'] * item['price'])}")
+        detail = item['format']
+        if item['extras']: detail += ' + ' + ', '.join(extra['name'] for extra in item['extras'])
+        if show('show_unit_price', 0): detail += f" · {amount(item['price'])} / ud."
+        if show('show_item_tax', 0): detail += f" · IVA {item['tax']}%"
+        lines.append('  ' + detail)
+        if show('show_notes', 0) and item['note']: lines.append('  Nota: ' + item['note'])
+        taxes[item['tax']] = taxes.get(item['tax'], 0) + item['qty'] * item['price']
+    lines.extend([separator, f"TOTAL PRODUCTOS  {amount(order['total'])}"])
+    if show('show_tax'):
+        for rate, gross in taxes.items():
+            tax = gross - int(gross / (1 + rate / 100) + 0.5)
+            lines.append(f"IVA {rate}% incluido  {amount(tax)}")
+    lines.append(separator)
+    for payment in order['payments']:
+        label = 'EFECTIVO' if payment['method'] == 'cash' else 'TARJETA'
+        if show('show_user') and payment.get('user_name'): label += ' · ' + payment['user_name']
+        lines.append(f"{label}  {amount(payment['amount'])}")
+        if show('show_tips') and payment.get('tip'):
+            lines.append(f"Propina  {amount(payment['tip'])}")
+        if payment['method'] == 'cash':
+            lines.append(f"Recibido {amount(payment['tendered'])} · Cambio {amount(payment['change_due'])}")
+    lines.extend([f"PENDIENTE  {amount(order['due'])}", separator])
+    lines.extend((template.get('footer') or 'Gracias por compartir mesa.\nMarchan2 · JoseluIA').splitlines())
     return '\n'.join(lines)
 
 
@@ -224,7 +258,11 @@ def enqueue_receipt(store, order_id, automatic=False):
             row = c.execute('SELECT * FROM ticket_templates WHERE id=?', (chosen,)).fetchone() if chosen else \
                   c.execute('SELECT * FROM ticket_templates WHERE is_default=1 ORDER BY id LIMIT 1').fetchone()
             template = dict(row) if row else None
-        payload = _format_receipt(order, read_company(store), template)
+        categories = {}
+        if template and template.get('line_order') == 'Categoría':
+            categories = {row['id']: row['category_name'] for row in c.execute('''SELECT p.id,c.name category_name
+                FROM products p JOIN categories c ON c.id=p.category_id''')}
+        payload = _format_receipt(order, read_company(store), template, categories)
         try:
             job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,unique_key,backend)
                 VALUES(?,?,?,?,?,?,?)''', (datetime.now().isoformat(timespec='seconds'),

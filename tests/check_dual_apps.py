@@ -18,7 +18,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--frozen',action='store_tr
 class Client:
     def __init__(self,app,folder):
         name='Marchan2_TPV.exe' if app=='tpv' else 'Marchan2_Administracion.exe'
-        command=[str(root/'dist/Marchan2_v0.17'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
+        command=[str(root/'dist/Marchan2_v0.18'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
@@ -80,8 +80,10 @@ with tempfile.TemporaryDirectory() as tmp:
         admin.request('scale_probe',{},status=400)
         assert admin.request('ticket_templates')==[]
         admin.request('ticket_template_save',{'name':'QA','base':'80 mm','header':'Cabecera QA',
-            'footer':'Pie QA','show_time':True,'show_user':True,'show_tax':True,'is_default':True})
+            'footer':'Pie QA','show_time':True,'show_user':True,'show_tax':True,
+            'is_default':False,'apply_to_active_profile':True})
         assert admin.request('state')['ticket_template']['header']=='Cabecera QA'
+        assert admin.request('pos_profiles')[0]['options']['receipt_template_id']==admin.request('ticket_templates')[0]['id']
         assert admin.request('series')==[]
         admin.request('series_save',{'name':'F QA','type':'Factura','next_number':'1','active':True})
         assert admin.request('series')[0]['name']=='F QA'

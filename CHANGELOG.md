@@ -1,5 +1,9 @@
 # Cambios de Marchan2
 
+## 0.18
+- La vista previa del editor de plantillas y «Ver cuenta» del TPV comparten ahora el mismo diseño de ticket, con los mismos campos y opciones. El TPV refresca la plantilla activa al abrir la cuenta.
+- Administración muestra qué plantilla usa el TPV activo y permite asignar al puesto el diseño editado al guardarlo. La salida de texto RAW incorpora más campos y opciones de la plantilla; las imágenes siguen limitadas a la salida gráfica.
+
 ## 0.17
 - Corrige la salida en blanco con controladores Windows «Generic / Text Only»: tickets, informe Z, comandas y prueba pueden enviarse como texto RAW. Se puede elegir el modo por destino o dejarlo en detección automática.
 - Los trabajos conservan el modo elegido; la migración añade el ajuste sin reiniciar las colas ni borrar datos. La impresión física debe verificarse con el modelo instalado.

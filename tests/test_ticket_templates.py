@@ -3,10 +3,22 @@ import unittest
 from pathlib import Path
 
 import ticket_templates
+import pos_profiles
 from store import Store
 
 
 class TicketTemplateTests(unittest.TestCase):
+    def test_save_can_apply_design_to_active_tpv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp) / 'test.db')
+            ticket_templates.initialize(store)
+            identity = ticket_templates.save(store, {'name': 'Mi ticket', 'base': '80 mm',
+                'header': 'MI LOCAL', 'footer': 'Hasta pronto', 'show_time': True,
+                'show_user': True, 'show_tax': True, 'is_default': False,
+                'apply_to_active_profile': True})['id']
+            self.assertEqual(pos_profiles.active(store)['options']['receipt_template_id'], identity)
+            self.assertIsNone(ticket_templates.current(store))
+
     def test_default_selection_and_persistence(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')

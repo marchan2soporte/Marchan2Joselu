@@ -96,5 +96,22 @@ class PrintingTests(unittest.TestCase):
             backends = [row[0] for row in c.execute('SELECT backend FROM print_jobs ORDER BY id')]
         self.assertEqual(backends, ['raw', 'raw'])
 
+    def test_text_only_ticket_respects_selected_template(self):
+        order = self.store.mutate('open', {'direct': True}, actor=1)['order_id']
+        product = self.profile['products'][0]
+        self.store.mutate('add', {'order_id': order, 'format_id': product['formats'][0]['id']}, actor=1)
+        with self.store.db() as c:
+            snapshot = self.store.order(c, order)
+        template = {'base': '56 mm · 32 caracteres', 'header': 'MI CABECERA',
+                    'footer': 'MI PIE', 'show_order_id': 0, 'show_location': 0,
+                    'show_time': 0, 'show_tax': 0, 'show_unpaid': 1}
+        text = printing._format_receipt(snapshot, {'tax_id': 'B123'}, template)
+        self.assertIn('MI CABECERA', text)
+        self.assertIn('MI PIE', text)
+        self.assertIn('PENDIENTE DE COBRO', text)
+        self.assertNotIn('Cuenta #', text)
+        self.assertNotIn('VENTA DIRECTA', text)
+        self.assertIn('B123', text)
+
 
 if __name__ == '__main__': unittest.main()
