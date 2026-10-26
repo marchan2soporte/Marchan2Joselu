@@ -1,5 +1,10 @@
 # Cambios de Marchan2
 
+## 0.13
+- Editor de plantillas de ticket rediseñado con identidad visual propia, selector de anchuras de papel, vista previa en vivo y opciones de contenido.
+- Cabecera y pie admiten imágenes PNG/JPEG pequeñas guardadas localmente. Las opciones de orden de productos, notas, precio unitario, IVA por línea, propinas, aviso de pendiente e identificación se aplican al recibo de prueba del TPV.
+- Los QR fiscales, la asignación directa de impresoras y la emisión de facturas siguen pendientes.
+
 ## 0.12
 - Configuración global: asignación de una plantilla de comanda existente; Preparación permite verla e imprimirla como documento interno de prueba.
 - TPV: propinas opcionales con sugerencia por porcentaje o importe, registradas por separado de las ventas y visibles en el recibo de prueba.
