@@ -1,7 +1,7 @@
 {
   "version": "0.21",
   "name": "Marchan2",
-  "repository": "https://github.com/marchan2soporte/Marchan2Pedro",
+  "repository": "https://github.com/marchan2soporte/Marchan2Joselu",
   "portable_directory": "Marchan2_v0.21",
   "portable_filename": "Marchan2_v0.21_Windows.zip",
   "python": "3.14",
@@ -15,5 +15,7 @@
     "listed": 69
   },
   "status": "prototype",
-  "ticketbai": "pending"
+  "ticketbai": "pending",
+  "source_repository": "https://github.com/marchan2soporte/Marchan2Pedro",
+  "source_revision": "6ee495955d2b5c5d2b9f9d0694dabb9a3a634140"
 }

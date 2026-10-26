@@ -61,6 +61,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $tag = "update-$env:GITHUB_RUN_NUMBER"
-          gh release create $tag $env:RELEASE_ZIP --target $env:GITHUB_SHA --title "Marchan2 actualización $env:GITHUB_RUN_NUMBER" --generate-notes
+          $releaseInfo = Get-Content release.json | ConvertFrom-Json
+          $tag = "joselu-v$($releaseInfo.version)-$env:GITHUB_RUN_NUMBER"
+          gh release create $tag $env:RELEASE_ZIP --target $env:GITHUB_SHA --title "Marchan2Joselu $($releaseInfo.version) · compilación $env:GITHUB_RUN_NUMBER" --generate-notes
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
