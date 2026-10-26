@@ -18,7 +18,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--frozen',action='store_tr
 class Client:
     def __init__(self,app,folder):
         name='Marchan2_TPV.exe' if app=='tpv' else 'Marchan2_Administracion.exe'
-        command=[str(root/'dist/Marchan2_v0.11'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
+        command=[str(root/'dist/Marchan2_v0.12'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
@@ -78,6 +78,9 @@ with tempfile.TemporaryDirectory() as tmp:
         config=admin.request('global_config');assert config['pos_series']['Factura'] is None
         config['pos_series']['Factura']=admin.request('series')[0]['id']
         config['preferences']['stock_warning']=True
+        config['preferences']['command_template']=str(admin.request('ticket_templates')[0]['id'])
+        config['preferences']['include_center_sales']=True
+        config['preferences']['include_pending']=True
         admin.request('global_config',config)
         assert admin.request('global_config')['pos_series']['Factura']==config['pos_series']['Factura']
         assert admin.request('global_config')['preferences']['stock_warning']
@@ -106,6 +109,8 @@ with tempfile.TemporaryDirectory() as tmp:
         tpv.request('global_config',status=403)
         assert tpv.request('state')['ticket_template']['header']=='Cabecera QA'
         assert tpv.request('state')['global_config']['preferences']['stock_warning']
+        assert tpv.request('state')['command_template']['header']=='Cabecera QA'
+        assert [s['title'] for s in tpv.request('daily_close')['sections']]==['Ventas por centro','Cuentas pendientes ahora']
         tpv.request('ticket_templates',status=403)
         tpv.request('ticket_template_save',{'name':'BLOCKED'},status=403)
         tpv.request('series_save',{'name':'BLOCKED'},status=403)

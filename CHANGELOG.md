@@ -1,5 +1,11 @@
 # Cambios de Marchan2
 
+## 0.12
+- Configuración global: asignación de una plantilla de comanda existente; Preparación permite verla e imprimirla como documento interno de prueba.
+- TPV: propinas opcionales con sugerencia por porcentaje o importe, registradas por separado de las ventas y visibles en el recibo de prueba.
+- TPV: resumen diario de solo lectura que aplica los indicadores disponibles de cierre (centro, usuario, cobros, cancelaciones, familias, cuentas pendientes, efectivo y propinas). La impresión depende de la opción configurada; no ejecuta un cierre de caja.
+- Las funciones de recargo, Scan & Pay con Redsys, pedido remoto en mesa, cierre automático y facturación web continúan pendientes de integración.
+
 ## 0.11
 - TPV: aviso de stock mínimo, cancelación auditada con motivo configurable y referencia interna consecutiva de la serie asignada al cerrar una cuenta de prueba.
 - Conexión inicial Administración/TPV: datos de Empresa en el ticket de prueba y consolidación de líneas controlada por Configuración global.

@@ -50,6 +50,8 @@ class WorkflowMixin:
                     c.execute('INSERT INTO users(name,pin_hash,role) VALUES(?,?,?)',('ADMIN',password('1234'),'admin'))
                 c.execute("INSERT INTO payments(order_id,amount,method,tendered,change_due,created) SELECT id,total,payment,COALESCE(tendered,total),COALESCE(change_due,0),paid_at FROM orders WHERE status='paid' AND NOT EXISTS(SELECT 1 FROM payments p WHERE p.order_id=orders.id)")
                 c.execute('PRAGMA user_version=2')
+            if 'tip' not in [r['name'] for r in c.execute('PRAGMA table_info(payments)')]:
+                c.execute('ALTER TABLE payments ADD COLUMN tip INTEGER NOT NULL DEFAULT 0')
 
     def users(self,active_only=True):
         with self.db() as c:
@@ -98,15 +100,17 @@ class WorkflowMixin:
             raise ValueError('El importe a cobrar no es válido.')
         method=data.get('payment')
         if method not in ('cash','card'):raise ValueError('Elige efectivo o tarjeta.')
-        tendered=money(data.get('tendered',0)) if method=='cash' else amount
-        if tendered<amount:raise ValueError('El efectivo recibido no cubre el importe.')
+        tip=money(data.get('tip',0))
+        if tip>10000:raise ValueError('La propina no puede superar 100 € por cobro.')
+        tendered=money(data.get('tendered',0)) if method=='cash' else amount+tip
+        if tendered<amount+tip:raise ValueError('El efectivo recibido no cubre el importe y la propina.')
         now=datetime.now().isoformat(timespec='seconds')
-        c.execute('INSERT INTO payments(order_id,amount,method,tendered,change_due,created,user_id,request_id) VALUES(?,?,?,?,?,?,?,?)',
-                  (order['id'],amount,method,tendered,tendered-amount,now,actor,data.get('request_id')))
+        c.execute('INSERT INTO payments(order_id,amount,method,tendered,change_due,tip,created,user_id,request_id) VALUES(?,?,?,?,?,?,?,?,?)',
+                  (order['id'],amount,method,tendered,tendered-amount-tip,tip,now,actor,data.get('request_id')))
         paid=order['paid']+amount
         if paid==order['total']:
             methods={r[0] for r in c.execute('SELECT method FROM payments WHERE order_id=?',(order['id'],))}
-            c.execute("UPDATE orders SET status='paid',paid_at=?,payment=?,total=?,tendered=?,change_due=? WHERE id=?",(now,method if len(methods)==1 else 'mixed',order['total'],tendered,tendered-amount,order['id']))
+            c.execute("UPDATE orders SET status='paid',paid_at=?,payment=?,total=?,tendered=?,change_due=? WHERE id=?",(now,method if len(methods)==1 else 'mixed',order['total'],tendered,tendered-amount-tip,order['id']))
             settings=c.execute("SELECT value FROM settings WHERE key='global_config'").fetchone()
             selected=json.loads(settings['value']).get('pos_series',{}).get('Fra. Simp.') if settings else None
             if selected:
@@ -115,7 +119,7 @@ class WorkflowMixin:
                     c.execute('UPDATE orders SET series_id=?,series_number=?,series_name=? WHERE id=?',
                               (series['id'],series['next_number'],series['name'],order['id']))
                     c.execute('UPDATE document_series SET next_number=next_number+1 WHERE id=?',(series['id'],))
-        return {'receipt':self.order(c,order['id']),'paid_now':amount,'change':tendered-amount}
+        return {'receipt':self.order(c,order['id']),'paid_now':amount,'tip':tip,'change':tendered-amount-tip}
 
     def mutate(self,action,data,actor=None):
         extended={'pay','split_pay','march','course','note','move','cancel_line','user','user_disable'}

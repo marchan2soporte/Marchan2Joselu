@@ -7,6 +7,7 @@ import company
 import series
 import global_config
 import ticket_templates
+import daily_close
 import json
 import os
 from pathlib import Path
@@ -76,7 +77,7 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.11'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.12'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -105,6 +106,8 @@ def main(default_app='tpv'):
                     data=store.state();data['user']=user;data['ticket_template']=ticket_templates.current(store)
                     data['company']=company.read(store)
                     data['global_config']=global_config.read(store)
+                    command_id=data['global_config']['preferences']['command_template']
+                    data['command_template']=next((t for t in ticket_templates.list_all(store) if str(t['id'])==str(command_id)),None)
                     if args.app=='tpv' and data['global_config']['preferences']['stock_warning']:
                         data['stock_warnings']=[{'name':i['name'],'unit':i['unit'],'balance':i['balance'],'minimum':i['minimum']}
                             for i in inventory.state(store)['items'] if i['minimum'] and i['balance']<i['minimum']]
@@ -113,6 +116,7 @@ def main(default_app='tpv'):
                     else:data['users']=store.users(False)
                     return self.reply(200,data)
                 if path=='/api/preparation' and args.app=='tpv':return self.reply(200,store.preparation())
+                if path=='/api/daily_close' and args.app=='tpv':return self.reply(200,daily_close.preview(store))
                 if path.startswith('/api/receipt/'):return self.reply(200,store.receipt(int(path.rsplit('/',1)[1])))
                 self.reply(404,{'error':'No encontrado.'})
             except (ValueError,KeyError) as error:self.reply(400,{'error':str(error)})

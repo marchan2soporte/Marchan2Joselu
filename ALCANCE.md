@@ -1,4 +1,4 @@
-# Estado de los informes de Marchan2 0.3
+# Alcance funcional de Marchan2 0.12
 
 Administración → Empresa permite guardar nombre fiscal, nombre comercial, CIF, dirección, población, provincia, código postal, contacto, teléfono, email y página web. Aceptar guarda la ficha local; Cancelar descarta la edición. Nombre comercial o fiscal, CIF y dirección aparecen en el detalle imprimible de prueba.
 
@@ -6,11 +6,15 @@ Administración → Series permite crear, buscar, copiar, editar y eliminar seri
 
 Administración → Configuración global sustituye la tarjeta Locales. Permite guardar asignaciones de series activas por tipo de documento para el punto de venta. La asignación de «Fra. Simp.» se usa solo como referencia interna en cuentas de prueba.
 
-El formulario completo de Configuración global guarda además preferencias de stock, operativa de venta, comandas, propinas, recargo, pedidos, cierre y administración web. La mayoría se identifica como preferencias para próximas funciones; la consolidación de líneas sí se aplica en el TPV. Scan & Pay y pedido en mesa solo ofrecen el valor Desactivado hasta que existan esos módulos.
+El formulario completo de Configuración global guarda además preferencias de stock, operativa de venta, comandas, propinas, recargo, pedidos, cierre y administración web. La consolidación de líneas, la plantilla de comandas y la sugerencia de propina sí se aplican en el TPV. Scan & Pay y pedido en mesa solo ofrecen el valor Desactivado hasta que existan esos módulos.
 
 Conexión progresiva con TPV: Empresa aparece en el detalle imprimible de prueba (nombre comercial o fiscal, CIF y dirección); Consolidar líneas al vender ya controla si las nuevas líneas iguales se agrupan. La aplicación no emite facturas fiscales.
 
-También están conectados al TPV: aviso cuando un artículo de almacén con mínimo configurado está por debajo de él; motivo obligatorio al cancelar una línea enviada a preparación cuando se activa esa opción; y referencia interna consecutiva de la serie «Fra. Simp.» al cobrar una cuenta completa. Las ventas siguen sin descontar existencias y la referencia interna no constituye factura ni numeración fiscal. Redsys, facturación legal, recargos, propinas, pedidos remotos y cierre automático requieren módulos adicionales y no se activan con las preferencias guardadas.
+También están conectados al TPV: aviso cuando un artículo de almacén con mínimo configurado está por debajo de él; motivo obligatorio al cancelar una línea enviada a preparación cuando se activa esa opción; y referencia interna consecutiva de la serie «Fra. Simp.» al cobrar una cuenta completa. Las ventas siguen sin descontar existencias y la referencia interna no constituye factura ni numeración fiscal.
+
+La plantilla de comandas seleccionada aporta cabecera y pie a la vista imprimible de Preparación. Al cobrar, el TPV sugiere una propina configurable que puede modificarse; se registra aparte de la venta y no altera el total de productos. El resumen diario del TPV muestra datos disponibles según las opciones de cierre: ventas por centro y usuario, cobros por usuario, cancelaciones por usuario, ventas por familia, cuentas pendientes, efectivo registrado y propinas por forma de pago. La opción «Imprimir diario de ventas» permite imprimir ese resumen de prueba. No se registra un cierre de caja ni se compara efectivo físico.
+
+Siguen pendientes: recargo por servicio, datos de comensales e invitaciones, devoluciones, cierre automático y finalización automática de preparaciones, Scan & Pay/Redsys, pedido remoto en mesa y facturación legal o web. Las opciones guardadas para esas funciones no cambian el TPV. El límite de factura simplificada es una preferencia sin efecto fiscal hasta que exista un módulo de facturación validado.
 
 Administración → Plantillas de ticket permite crear, copiar, editar y eliminar diseños de prueba, elegir formato 80 mm o A4, cabecera, pie y visibilidad de hora, usuario e IVA orientativo. La plantilla predeterminada se aplica al detalle imprimible de las cuentas en TPV y Administración. La vista previa usa datos ficticios. No se generan facturas fiscales, códigos QR ni salida directa a una impresora configurada.
 

@@ -3,11 +3,37 @@ import unittest
 from pathlib import Path
 
 import global_config
+import daily_close
 import series
+import ticket_templates
 from store import Store
 
 
 class GlobalConfigTests(unittest.TestCase):
+    def test_command_template_selection_and_daily_summary_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp) / 'test.db')
+            series.initialize(store)
+            ticket_templates.initialize(store)
+            template_id = ticket_templates.save(store, {'name': 'Comanda interna', 'base': '80 mm',
+                'header': 'COCINA', 'footer': 'Preparar', 'show_time': True,
+                'show_user': True, 'show_tax': False, 'is_default': False})['id']
+            config = global_config.read(store)
+            config['preferences']['command_template'] = str(template_id)
+            config['preferences']['include_center_sales'] = True
+            config['preferences']['include_pending'] = True
+            global_config.save(store, config)
+            self.assertEqual(global_config.read(store)['preferences']['command_template'], str(template_id))
+            order_id = store.mutate('open', {'direct': True})['order_id']
+            summary = daily_close.preview(store)
+            self.assertEqual(summary['sales'], 0)
+            self.assertEqual([section['title'] for section in summary['sections']],
+                             ['Ventas por centro', 'Cuentas pendientes ahora'])
+            self.assertEqual(summary['sections'][1]['rows'][0][0], order_id)
+            config['preferences']['command_template'] = '99999'
+            with self.assertRaises(ValueError):
+                global_config.save(store, config)
+
     def test_series_assignment_and_validation(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
@@ -96,3 +122,25 @@ class GlobalConfigTests(unittest.TestCase):
                 numbers.append(result['receipt']['series_number'])
             self.assertEqual(numbers, [12, 13])
             self.assertEqual(series.list_all(store)[0]['next_number'], 14)
+
+    def test_tip_is_recorded_separately_from_sale_and_close_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp) / 'test.db')
+            series.initialize(store)
+            settings = global_config.read(store)
+            settings['preferences']['include_tips'] = True
+            global_config.save(store, settings)
+            order_id = store.mutate('open', {'direct': True})['order_id']
+            format_id = store.state()['products'][0]['formats'][0]['id']
+            store.mutate('add', {'order_id': order_id, 'format_id': format_id})
+            order = store.receipt(order_id)
+            result = store.mutate('pay', {'order_id': order_id,
+                'expected_total': order['total'], 'expected_due': order['due'],
+                'payment': 'cash', 'tendered': str((order['total'] + 150) / 100),
+                'tip': '1.50', 'request_id': 'tip-test'})
+            self.assertEqual(result['receipt']['total'], order['total'])
+            self.assertEqual(result['receipt']['payments'][0]['tip'], 150)
+            self.assertEqual(result['change'], 0)
+            summary = daily_close.preview(store)
+            self.assertEqual(summary['sales'], order['total'])
+            self.assertEqual(summary['sections'][0]['rows'], [['EFECTIVO', 150]])

@@ -1,4 +1,4 @@
-"""Global administrative preferences awaiting document integration."""
+"""Shared local preferences for active POS behavior and future modules."""
 import json
 
 SERIES_TYPES = ('Fra. Simp.', 'Factura', 'Dev. Simp.', 'Devolución', 'Pedido', 'Albarán')
@@ -22,6 +22,7 @@ def defaults():
     return {**{key: key == 'consolidate_lines' for key in BOOL_OPTIONS},
             **{key: values[0] for key, values in CHOICES.items()},
             'service_charge_percent': '0', 'simplified_invoice_limit': '',
+            'tip_suggestion_value': '0',
             'service_charge_tax': 'Exento'}
 
 
@@ -43,9 +44,11 @@ def save(store, data):
         if not isinstance(preferences[key], bool):
             raise ValueError('Opción no válida: ' + key)
     for key, choices in CHOICES.items():
+        if key == 'command_template':
+            continue
         if preferences[key] not in choices:
             raise ValueError('Selección no válida: ' + key)
-    for key in ('service_charge_percent', 'simplified_invoice_limit'):
+    for key in ('service_charge_percent', 'simplified_invoice_limit', 'tip_suggestion_value'):
         value = preferences[key]
         if not isinstance(value, str) or len(value) > 20:
             raise ValueError('Importe no válido.')
@@ -54,7 +57,7 @@ def save(store, data):
                 amount = float(value.replace(',', '.'))
             except ValueError:
                 raise ValueError('Introduce un importe válido.')
-            if not 0 <= amount <= (100 if key == 'service_charge_percent' else 100000):
+            if not 0 <= amount <= (100 if key in ('service_charge_percent', 'tip_suggestion_value') else 100000):
                 raise ValueError('Importe fuera de rango.')
     if preferences['service_charge_tax'] not in ('Exento', '0 %', '4 %', '10 %', '21 %'):
         raise ValueError('Impuesto no válido.')
@@ -63,6 +66,14 @@ def save(store, data):
         raise ValueError('Faltan tipos de serie.')
     result = {}
     with store.db() as c:
+        template = preferences['command_template']
+        if template != 'Sin asignar':
+            try:
+                template_id = int(template)
+            except (TypeError, ValueError):
+                raise ValueError('Plantilla de comandas no válida.')
+            if not c.execute('SELECT 1 FROM ticket_templates WHERE id=?', (template_id,)).fetchone():
+                raise ValueError('La plantilla de comandas ya no existe.')
         for kind in SERIES_TYPES:
             identity = values[kind]
             if identity in (None, ''):
