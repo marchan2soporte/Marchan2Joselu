@@ -1,5 +1,10 @@
 # Cambios de Marchan2
 
+## 0.16
+- Puntos de venta incorpora destinos de impresión para el ticket y el informe Z de prueba. El ticket puede imprimirse al pulsar el botón o automáticamente al completar el cobro, en una impresora instalada en Windows.
+- Nuevas rutas de impresoras de cocina por tipo de preparación (BARRA, COCINA) y centros de venta. Preparar, Marchar y la preparación automática crean trabajos para las rutas correspondientes.
+- Prueba de impresión, historial de trabajos, aviso de error y reintento manual. Una impresora desconectada no anula la venta ni la comanda. Proformas, facturas y otros documentos no emitidos por Marchan2 siguen pendientes.
+
 ## 0.15
 - Informe Z operativo de prueba en el TPV, con secciones configurables por perfil y datos reales de ventas, cobros, cancelaciones, propinas y cuentas pendientes. Permite vista previa e impresión mediante Windows; no cierra la caja ni emite documentos fiscales.
 - Diagnóstico desde el perfil activo: comprueba si se abre una conexión TCP a una IP local de impresora y enumera/lee puertos COM de balanzas que emitan peso en texto (kg o g). Incorpora velocidad serie configurable.

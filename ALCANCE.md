@@ -1,4 +1,8 @@
-# Alcance funcional de Marchan2 0.15
+# Alcance funcional de Marchan2 0.16
+
+Administración → Puntos de venta → Impresoras permite escoger entre las impresoras instaladas en Windows. El ticket de prueba puede imprimirse manualmente en una cola elegida o automáticamente al completar el cobro; el informe Z de prueba admite otra cola. Se pueden configurar rutas de impresión de cocina para BARRA, COCINA o ambos tipos, opcionalmente filtradas por centro de venta. Al preparar o marchar productos, se crean trabajos con las líneas recién enviadas. También funciona cuando la preparación automática está activada.
+
+Una prueba envía una hoja real. Los trabajos se guardan con estado y error; se pueden reintentar si la impresora falla. La venta y la comanda no se deshacen por un fallo de impresión. La impresión directa usa texto de prueba y los controladores de Windows, no un protocolo universal por IP ni un documento fiscal. La entrega física y el formato final dependen de la impresora instalada y deben verificarse con el equipo real. Proformas, facturas, albaranes, entradas y apertura de cajón todavía no se emiten desde Marchan2.
 
 El TPV ofrece un informe Z operativo **de prueba** con vista previa e impresión mediante Windows. Las secciones se eligen en Administración → Puntos de venta para el perfil activo: ventas por usuario o centro, cobros por forma de pago, cancelaciones, propinas, cuentas pendientes, efectivo teórico y ventas por familia. Se alimenta de operaciones registradas; no realiza cierre contable, arqueo físico ni emisión fiscal.
 
@@ -6,7 +10,7 @@ En el perfil activo se puede comprobar una IP local y puerto TCP de impresora, s
 
 Administración → Puntos de venta permite mantener varios perfiles y activar uno para este TPV local. El perfil activo determina permisos de cobro, preparación automática de líneas nuevas, búsqueda inicial de productos, visualización de última venta y plantilla del ticket de prueba. El saldo inicial se usa como referencia en el resumen diario de efectivo, sin constituir un arqueo de caja. Los perfiles no representan terminales de red independientes.
 
-Puede guardarse la IP de una impresora de red y el puerto COM de una balanza para usar los diagnósticos. Los tickets de prueba se imprimen mediante el diálogo de Windows. La impresión directa por tipo de documento, los visores externos, el uso del peso en la venta y las demás opciones avanzadas de la captura de referencia siguen pendientes.
+Puede guardarse la IP de una impresora de red y el puerto COM de una balanza para usar los diagnósticos. La IP de diagnóstico no sustituye a una cola instalada en Windows. La impresión de documentos distintos del ticket y del informe Z de prueba, los visores externos, el uso del peso en la venta y las demás opciones avanzadas de la captura de referencia siguen pendientes.
 
 Administración → Empresa permite guardar nombre fiscal, nombre comercial, CIF, dirección, población, provincia, código postal, contacto, teléfono, email y página web. Aceptar guarda la ficha local; Cancelar descarta la edición. Nombre comercial o fiscal, CIF y dirección aparecen en el detalle imprimible de prueba.
 
@@ -24,7 +28,7 @@ La plantilla de comandas seleccionada aporta cabecera y pie a la vista imprimibl
 
 Siguen pendientes: recargo por servicio, datos de comensales e invitaciones, devoluciones, cierre automático y finalización automática de preparaciones, Scan & Pay/Redsys, pedido remoto en mesa y facturación legal o web. Las opciones guardadas para esas funciones no cambian el TPV. El límite de factura simplificada es una preferencia sin efecto fiscal hasta que exista un módulo de facturación validado.
 
-Administración → Plantillas de ticket permite crear, copiar, editar y eliminar diseños de prueba; elegir 56 mm, variantes de 80 mm o A4; añadir texto e imágenes PNG/JPEG pequeñas a cabecera y pie; y configurar orden de productos, hora, usuario, impuestos orientativos, notas, ubicación, identificador interno, precio unitario y propinas. La plantilla predeterminada se aplica al detalle imprimible de las cuentas en TPV y Administración. La vista previa usa datos ficticios. La impresión abre el diálogo del sistema; no se selecciona una impresora concreta desde Marchan2. No se generan facturas fiscales ni códigos QR fiscales.
+Administración → Plantillas de ticket permite crear, copiar, editar y eliminar diseños de prueba; elegir 56 mm, variantes de 80 mm o A4; añadir texto e imágenes PNG/JPEG pequeñas a cabecera y pie; y configurar orden de productos, hora, usuario, impuestos orientativos, notas, ubicación, identificador interno, precio unitario y propinas. La plantilla predeterminada se aplica al detalle imprimible de las cuentas en TPV y Administración. La vista previa usa datos ficticios. La impresión directa a una cola de Windows usa una versión de texto del ticket; si no hay cola asignada, se abre el diálogo del sistema con el diseño visual. Las imágenes no se incluyen en la impresión directa de texto. No se generan facturas fiscales ni códigos QR fiscales.
 
 28 informes disponibles de 69 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.
 

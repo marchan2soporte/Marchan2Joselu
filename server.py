@@ -11,6 +11,7 @@ import daily_close
 import pos_profiles
 import z_report
 import peripherals
+import printing
 import json
 import os
 from pathlib import Path
@@ -76,12 +77,12 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
-                if path in ('/app.js','/receipt.js','/style.css','/global-config.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
+                if path in ('/app.js','/receipt.js','/style.css','/global-config.js','/printing-admin.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.15'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.16'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -132,6 +133,11 @@ def main(default_app='tpv'):
                 if path=='/api/daily_close' and args.app=='tpv':return self.reply(200,daily_close.preview(store))
                 if path=='/api/z_report' and args.app=='tpv':return self.reply(200,z_report.preview(store))
                 if path=='/api/peripheral_ports' and args.app=='admin':return self.reply(200,peripherals.serial_ports())
+                if path=='/api/printing':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    profile_id=int(parse_qs(urlparse(self.path).query).get('profile_id',[0])[0])
+                    return self.reply(200,printing.configuration(store,profile_id))
+                if path=='/api/print_jobs':return self.reply(200,printing.jobs(store))
                 if path.startswith('/api/receipt/'):return self.reply(200,store.receipt(int(path.rsplit('/',1)[1])))
                 self.reply(404,{'error':'No encontrado.'})
             except (ValueError,KeyError) as error:self.reply(400,{'error':str(error)})
@@ -182,6 +188,42 @@ def main(default_app='tpv'):
                 if action in ('printer_probe','scale_probe'):
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,peripherals.printer_probe(store) if action=='printer_probe' else peripherals.scale_probe(store))
+                if action in ('printing_document_save','printing_kitchen_save','printing_kitchen_delete','printing_test'):
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    handlers={'printing_document_save':printing.save_document,
+                              'printing_kitchen_save':printing.save_kitchen,
+                              'printing_kitchen_delete':printing.delete_kitchen,
+                              'printing_test':lambda s,d:printing.test_print(s,d.get('printer_name'))}
+                    result=handlers[action](store,data)
+                    if result.get('job_id'):
+                        result['print_warnings']=printing.dispatch(store,[result['job_id']])
+                    return self.reply(200,result)
+                if action=='print_document':
+                    if args.app!='tpv':return self.reply(403,{'error':'Solo TPV.'})
+                    kind=data.get('kind')
+                    if kind=='receipt':
+                        result=printing.enqueue_receipt(store,int(data['order_id']))
+                    elif kind=='z_report':
+                        report=z_report.preview(store)
+                        lines=['MARCHAN2 · INFORME Z DE PRUEBA',report['day'],
+                               f"Ventas: {report['sales']/100:.2f} EUR",
+                               f"Cobros: {report['payments']/100:.2f} EUR"]
+                        for section in report['sections']:
+                            lines.append(section['title'])
+                            for row in section['rows']:
+                                last = row[-1]
+                                if section['columns'][-1] in ('Importe','Pendiente'):
+                                    last = f'{last/100:.2f} EUR'
+                                lines.append('  '.join(map(str,[*row[:-1],last])))
+                        lines.append(report['note'])
+                        result=printing.enqueue_text(store,'z_report','\n'.join(lines))
+                    else:raise ValueError('Documento no disponible para impresión directa.')
+                    if result.get('job_id'):
+                        result['print_warnings']=printing.dispatch(store,[result['job_id']])
+                    return self.reply(200,result)
+                if action=='print_retry':
+                    result={'print_warnings':printing.dispatch(store,[int(data['job_id'])])}
+                    return self.reply(200,result)
                 if action=='shutdown':
                     self.reply(200,{'ok':True});threading.Thread(target=self.server.shutdown,daemon=True).start();return
                 if action in ('supplier','stock_item','stock_move'):
@@ -189,7 +231,12 @@ def main(default_app='tpv'):
                     return self.reply(200,inventory.mutate(store,action,data,user['id']))
                 allowed=TPV_ACTIONS if args.app=='tpv' else ADMIN_ACTIONS
                 if action not in allowed:return self.reply(403,{'error':'Esta operación pertenece a la otra aplicación.'})
-                self.reply(200,store.mutate(action,data,actor=user['id']))
+                result=store.mutate(action,data,actor=user['id'])
+                if args.app=='tpv':
+                    if action in ('pay','split_pay') and result.get('receipt',{}).get('status')=='paid':
+                        printing.enqueue_receipt(store,result['receipt']['id'],automatic=True)
+                    result['print_warnings']=printing.dispatch(store)
+                self.reply(200,result)
             except sqlite3.IntegrityError:self.reply(409,{'error':'La operación ya está registrada o ese nombre está en uso. Actualiza la pantalla.'})
             except (ValueError,KeyError,TypeError) as error:self.reply(400,{'error':str(error)})
             except Exception:self.reply(500,{'error':'No se pudo guardar. La operación se ha deshecho.'})

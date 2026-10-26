@@ -152,6 +152,9 @@ class LegacyStore:
                     return {'line_id':same['id']}
                 lid=c.execute('INSERT INTO lines(order_id,product_id,format_id,name,format,price,qty,tax,extras,note,prep,course,kitchen) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
                           (data['order_id'],row['product_id'],row['id'],row['product_name'],row['name'],price,qty,row['tax'],extra_json,note,row['prep'],row['course'],'pending' if auto_prepare else 'new')).lastrowid
+                if auto_prepare:
+                    from printing import enqueue_kitchen
+                    enqueue_kitchen(c,self,data['order_id'],[lid])
                 return {'line_id':lid}
             elif action=='quantity':
                 row=c.execute('SELECT * FROM lines WHERE id=?',(data['line_id'],)).fetchone()
@@ -166,7 +169,10 @@ class LegacyStore:
             elif action=='send':
                 order=self.require_open(c,data['order_id'])
                 if not order['lines']:raise ValueError('Añade productos antes de enviar.')
+                newly_sent=[line['id'] for line in order['lines'] if line['kitchen']=='new']
                 c.execute("UPDATE lines SET kitchen='pending' WHERE order_id=? AND kitchen='new'",(data['order_id'],))
+                from printing import enqueue_kitchen
+                enqueue_kitchen(c,self,data['order_id'],newly_sent)
             elif action=='ready':
                 c.execute("UPDATE lines SET kitchen='ready' WHERE order_id=? AND prep=? AND kitchen='pending'",(data['order_id'],data['prep']))
             elif action=='pay':

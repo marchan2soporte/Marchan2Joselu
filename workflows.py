@@ -54,6 +54,8 @@ class WorkflowMixin:
                 c.execute('ALTER TABLE payments ADD COLUMN tip INTEGER NOT NULL DEFAULT 0')
         from pos_profiles import initialize as initialize_pos_profiles
         initialize_pos_profiles(self)
+        from printing import initialize as initialize_printing
+        initialize_printing(self)
 
     def users(self,active_only=True):
         with self.db() as c:
@@ -216,4 +218,7 @@ class WorkflowMixin:
                     c.execute('UPDATE lines SET course=? WHERE id=?',(data['course'],lid))
                 elif action=='note':
                     c.execute('UPDATE lines SET note=? WHERE id=?',(str(data.get('note',''))[:300],lid))
+            if action=='march':
+                from printing import enqueue_kitchen
+                enqueue_kitchen(c,self,order['id'],[lid for lid in selected if existing[lid]['kitchen']=='new'])
             return {'ok':True}

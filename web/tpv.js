@@ -51,7 +51,7 @@ async function showZReport(){
   const data=await api('z_report');
   const sections=data.sections.map(s=>`<h3>${esc(s.title)}</h3>${s.rows.length?`<div class="close-table">${s.rows.map(row=>`<div class="receipt-row"><span>${esc(row[0])}${row.length===3?' · '+esc(row[1]):''}</span><b>${['Importe','Pendiente'].includes(s.columns.at(-1))?euro(row.at(-1)):esc(row.at(-1))}</b></div>`).join('')}</div>`:'<p>Sin movimientos.</p>'}`).join('');
   openModal(modalTitle('Informe Z de prueba',`${data.day} · ${data.profile}`)+`<div class="receipt"><p>RESUMEN OPERATIVO · NO FISCAL</p><div class="receipt-row"><b>Ventas cerradas</b><b>${euro(data.sales)}</b></div><div class="receipt-row"><b>Cobros registrados</b><b>${euro(data.payments)}</b></div>${sections}<hr><p>${esc(data.note)}</p></div><div class="form-actions"><button class="button secondary" data-close>Volver</button><button class="button primary" id="print-z">Imprimir prueba</button></div>`);
-  $('#print-z').onclick=()=>window.print();
+  $('#print-z').onclick=async()=>{try{const result=await api('print_document',{kind:'z_report'});if(!result.configured){window.print();return}toast(result.print_warnings?.length?result.print_warnings.join(' · '):'Informe enviado a la impresora seleccionada',!!result.print_warnings?.length)}catch(error){toast(error.message,true)}};
  }catch(error){toast(error.message,true)}
 }
 const baseRenderTables=renderTables;
