@@ -86,3 +86,7 @@ button{touch-action:manipulation}.button,.pill{min-height:48px;font-size:14px}.p
 .command-receipt .command-identity{display:grid;gap:3px;font-size:13px}
 .command-receipt .command-identity b{font-size:17px}
 .command-receipt .receipt-row{font-size:15px;margin:5px 0}
+.permission-list{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:12px;margin-top:16px}
+.permission-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:12px;font-weight:500}
+.permission-item:last-child{border-bottom:0}.permission-item:hover{background:#f6f9f5}
+.permission-item[hidden]{display:none}.permission-item input{width:18px;min-height:18px;accent-color:var(--green)}

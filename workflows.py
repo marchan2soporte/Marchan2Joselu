@@ -56,10 +56,12 @@ class WorkflowMixin:
         initialize_pos_profiles(self)
         from printing import initialize as initialize_printing
         initialize_printing(self)
+        from permissions import initialize as initialize_permissions
+        initialize_permissions(self)
 
     def users(self,active_only=True):
         with self.db() as c:
-            return [dict(r) for r in c.execute('SELECT id,name,role,active FROM users'+(' WHERE active=1' if active_only else '')+' ORDER BY name')]
+            return [dict(r) for r in c.execute('SELECT id,name,role,active,profile_id FROM users'+(' WHERE active=1' if active_only else '')+' ORDER BY name')]
 
     def authenticate(self,uid,pin):
         with self.db() as c:
@@ -68,7 +70,7 @@ class WorkflowMixin:
         try:valid=hmac.compare_digest(user['pin_hash'],password(pin,user['pin_hash'].split(':')[0]))
         except ValueError:valid=False
         if not valid:raise ValueError('Usuario o PIN incorrectos.')
-        return {k:user[k] for k in ('id','name','role','active')}
+        return {k:user[k] for k in ('id','name','role','active','profile_id')}
 
     def audit(self,c,actor,action,oid=None):
         c.execute('INSERT INTO audit(created,user_id,action,order_id) VALUES(?,?,?,?)',(datetime.now().isoformat(timespec='seconds'),actor,action,oid))
@@ -149,11 +151,19 @@ class WorkflowMixin:
                 if action=='user_disable':c.execute('UPDATE users SET active=0 WHERE id=?',(uid,))
                 else:
                     if role not in ('admin','staff'):raise ValueError('Perfil no válido.')
+                    profile_id=data.get('profile_id')
+                    if profile_id is None:
+                        profile_id=current['profile_id'] if current and current['role']==role else c.execute(
+                            "SELECT id FROM user_profiles WHERE name=?", ('Administrador' if role=='admin' else 'Encargado',)).fetchone()[0]
+                    profile=c.execute('SELECT name FROM user_profiles WHERE id=?',(profile_id,)).fetchone()
+                    if not profile:raise ValueError('Elige un perfil de usuario existente.')
+                    if role=='staff' and profile['name']=='Administrador':raise ValueError('Este perfil requiere acceso de administrador.')
+                    if role=='admin' and profile['name']!='Administrador':raise ValueError('El administrador debe conservar su perfil completo.')
                     name=title(data.get('name'));pin=data.get('pin')
                     hashed=password(pin) if pin else current['pin_hash'] if current else None
                     if not hashed:raise ValueError('Indica un PIN para el nuevo usuario.')
-                    if current:c.execute('UPDATE users SET name=?,pin_hash=?,role=?,active=1 WHERE id=?',(name,hashed,role,uid))
-                    else:c.execute('INSERT INTO users(name,pin_hash,role) VALUES(?,?,?)',(name,hashed,role))
+                    if current:c.execute('UPDATE users SET name=?,pin_hash=?,role=?,profile_id=?,active=1 WHERE id=?',(name,hashed,role,profile_id,uid))
+                    else:c.execute('INSERT INTO users(name,pin_hash,role,profile_id) VALUES(?,?,?,?)',(name,hashed,role,profile_id))
                 return {'ok':True}
             order=self.require_open(c,data['order_id'])
             if action=='cancel_line':

@@ -18,7 +18,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--frozen',action='store_tr
 class Client:
     def __init__(self,app,folder):
         name='Marchan2_TPV.exe' if app=='tpv' else 'Marchan2_Administracion.exe'
-        command=[str(root/'dist/Marchan2_v0.20'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
+        command=[str(root/'dist/Marchan2_v0.21'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
@@ -114,6 +114,15 @@ with tempfile.TemporaryDirectory() as tmp:
         ana=next(u for u in admin.request('state')['users'] if u['name']=='ANA QA')
         admin.request('login',{'user_id':ana['id'],'pin':'4567'},status=400)
         tpv.login(ana['id'],'4567')
+        profile=admin.request('user_profile_save',{'name':'QA restringido','permissions':['ticket_open']})['id']
+        admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff','profile_id':profile})
+        assert tpv.request('state')['permissions']==['ticket_open']
+        tpv.request('print_document',{'kind':'z_report'},status=403)
+        tpv.request('pay',{'order_id':999,'expected_total':0},status=403)
+        admin.request('user_profile_save',{'id':profile,'name':'QA restringido','permissions':['ticket_open','ticket_pay']})
+        assert 'ticket_pay' in tpv.request('state')['permissions']
+        admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff',
+                              'profile_id':next(p for p in admin.request('user_profiles')['profiles'] if p['name']=='Encargado')['id']})
         tpv.request('analytics/dashboard',status=403)
         tpv.request('inventory',status=403)
         tpv.request('company',status=403)

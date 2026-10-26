@@ -12,6 +12,7 @@ import pos_profiles
 import z_report
 import peripherals
 import printing
+import permissions
 import json
 import os
 from pathlib import Path
@@ -67,7 +68,7 @@ def main(default_app='tpv'):
             if not session or time.monotonic()>session['expiry']:return None
             with store.db() as c:u=c.execute('SELECT * FROM users WHERE id=? AND active=1',(session['id'],)).fetchone()
             if not u or u['pin_hash']!=session['signature'] or (args.app=='admin' and u['role']!='admin'):return None
-            return {k:u[k] for k in ('id','name','role','active')}
+            return {k:u[k] for k in ('id','name','role','active','profile_id')}
 
         def do_GET(self):
             if not self.allowed():return self.reply(403,{'error':'Acceso local requerido.'})
@@ -77,7 +78,7 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
-                if path in ('/app.js','/receipt.js','/style.css','/global-config.js','/printing-admin.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
+                if path in ('/app.js','/receipt.js','/style.css','/global-config.js','/printing-admin.js','/user-profiles.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
@@ -100,6 +101,9 @@ def main(default_app='tpv'):
                 if path=='/api/pos_profiles':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,pos_profiles.list_all(store))
+                if path=='/api/user_profiles':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,permissions.list_all(store))
                 if path=='/api/inventory':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,inventory.state(store))
@@ -112,6 +116,7 @@ def main(default_app='tpv'):
                     return self.reply(404,{'error':'Informe no encontrado.'})
                 if path=='/api/state':
                     data=store.state();data['user']=user;data['pos_profile']=pos_profiles.active(store)
+                    with store.db() as c:data['permissions']=permissions.rights(c,user['id'])
                     data['ticket_template']=ticket_templates.current(store)
                     profile_template=data['pos_profile']['options']['receipt_template_id'] if data['pos_profile'] else None
                     if profile_template:
@@ -127,19 +132,29 @@ def main(default_app='tpv'):
                         if data['pos_profile']['options']['show_last_sale']:
                             data['last_sale']=data['history'][0] if data['history'] else None
                         for key in ('stats','history','payment_history'):data.pop(key,None)
-                    else:data['users']=store.users(False)
+                    else:
+                        data['users']=store.users(False)
+                        data['user_profiles']=permissions.list_all(store)['profiles']
                     return self.reply(200,data)
-                if path=='/api/preparation' and args.app=='tpv':return self.reply(200,store.preparation())
-                if path=='/api/daily_close' and args.app=='tpv':return self.reply(200,daily_close.preview(store))
-                if path=='/api/z_report' and args.app=='tpv':return self.reply(200,z_report.preview(store))
+                if path=='/api/preparation' and args.app=='tpv':
+                    permissions.require(store,user['id'],'kitchen_view');return self.reply(200,store.preparation())
+                if path=='/api/daily_close' and args.app=='tpv':
+                    permissions.require(store,user['id'],'daily_view');return self.reply(200,daily_close.preview(store))
+                if path=='/api/z_report' and args.app=='tpv':
+                    permissions.require(store,user['id'],'z_view');return self.reply(200,z_report.preview(store))
                 if path=='/api/peripheral_ports' and args.app=='admin':return self.reply(200,peripherals.serial_ports())
                 if path=='/api/printing':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     profile_id=int(parse_qs(urlparse(self.path).query).get('profile_id',[0])[0])
                     return self.reply(200,printing.configuration(store,profile_id))
-                if path=='/api/print_jobs':return self.reply(200,printing.jobs(store))
-                if path.startswith('/api/receipt/'):return self.reply(200,store.receipt(int(path.rsplit('/',1)[1])))
+                if path=='/api/print_jobs':
+                    if args.app=='tpv':permissions.require(store,user['id'],'print_retry')
+                    return self.reply(200,printing.jobs(store))
+                if path.startswith('/api/receipt/'):
+                    if args.app=='tpv':permissions.require(store,user['id'],'ticket_print')
+                    return self.reply(200,store.receipt(int(path.rsplit('/',1)[1])))
                 self.reply(404,{'error':'No encontrado.'})
+            except PermissionError as error:self.reply(403,{'error':str(error)})
             except (ValueError,KeyError) as error:self.reply(400,{'error':str(error)})
             except Exception:self.reply(500,{'error':'No se pudo leer la información.'})
 
@@ -172,6 +187,9 @@ def main(default_app='tpv'):
                 if action=='company':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,company.save(store,data))
+                if action in ('user_profile_save','user_profile_delete'):
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,permissions.save(store,data) if action=='user_profile_save' else permissions.delete(store,data))
                 if action in ('series_save','series_delete'):
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,series.save(store,data) if action=='series_save' else series.delete(store,data))
@@ -203,6 +221,7 @@ def main(default_app='tpv'):
                 if action=='print_document':
                     if args.app!='tpv':return self.reply(403,{'error':'Solo TPV.'})
                     kind=data.get('kind')
+                    permissions.require(store,user['id'],'ticket_print' if kind=='receipt' else 'z_print')
                     if kind=='receipt':
                         result=printing.enqueue_receipt(store,int(data['order_id']))
                     elif kind=='z_report':
@@ -224,6 +243,7 @@ def main(default_app='tpv'):
                         result['print_warnings']=printing.dispatch(store,[result['job_id']])
                     return self.reply(200,result)
                 if action=='print_retry':
+                    if args.app=='tpv':permissions.require(store,user['id'],'print_retry')
                     result={'print_warnings':printing.dispatch(store,[int(data['job_id'])])}
                     return self.reply(200,result)
                 if action=='shutdown':
@@ -233,6 +253,13 @@ def main(default_app='tpv'):
                     return self.reply(200,inventory.mutate(store,action,data,user['id']))
                 allowed=TPV_ACTIONS if args.app=='tpv' else ADMIN_ACTIONS
                 if action not in allowed:return self.reply(403,{'error':'Esta operación pertenece a la otra aplicación.'})
+                if args.app=='tpv':
+                    needed=permissions.ACTION.get(action)
+                    if needed:permissions.require(store,user['id'],needed)
+                    if action=='cancel_line':
+                        with store.db() as c:
+                            row=c.execute('SELECT kitchen FROM lines WHERE id=?',(data.get('line_id'),)).fetchone()
+                        if row and row['kitchen']!='new':permissions.require(store,user['id'],'ticket_cancel_prepared')
                 result=store.mutate(action,data,actor=user['id'])
                 if args.app=='tpv':
                     if action in ('pay','split_pay') and result.get('receipt',{}).get('status')=='paid':
@@ -240,6 +267,7 @@ def main(default_app='tpv'):
                     result['print_warnings']=printing.dispatch(store)
                 self.reply(200,result)
             except sqlite3.IntegrityError:self.reply(409,{'error':'La operación ya está registrada o ese nombre está en uso. Actualiza la pantalla.'})
+            except PermissionError as error:self.reply(403,{'error':str(error)})
             except (ValueError,KeyError,TypeError) as error:self.reply(400,{'error':str(error)})
             except Exception:self.reply(500,{'error':'No se pudo guardar. La operación se ha deshecho.'})
 

@@ -1,5 +1,10 @@
 # Cambios de Marchan2
 
+## 0.21
+- Perfiles de usuario editables en Administración, con 18 permisos asociados a las operaciones disponibles del TPV. Incluye Administrador, Encargado y Camarero; los usuarios existentes conservan su acceso al migrar.
+- La asignación de perfil se guarda por usuario y el servidor comprueba permisos en cada petición del TPV, incluso cuando el perfil cambia durante una sesión abierta. Las acciones sin permiso se desactivan también en la interfaz.
+- El listado de casi 500 permisos del archivo de referencia contiene módulos que Marchan2 aún no ofrece. Solo se muestran y aplican permisos para funciones disponibles; los demás siguen pendientes.
+
 ## 0.20
 - Las comandas de una misma preparación se agrupan en una sola impresión por envío, con pedido, mesa, personal, secciones y productos sin precios. La vista del TPV sigue la misma estructura.
 - El justificante de venta de prueba muestra columnas de productos e importes, resumen de IVA y cobros. La salida de texto para impresoras de 80 mm alinea los importes en 48 columnas.
