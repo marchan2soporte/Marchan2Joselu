@@ -175,14 +175,23 @@ def delete_kitchen(store, data):
     return {'ok': True}
 
 
-def _format_kitchen(order, line, route_name):
-    return '\n'.join(['MARCHAN2 · COMANDA DE PRUEBA', route_name,
-        f"Mesa: {order['table_name'] or 'VENTA DIRECTA'}   Cuenta: #{order['id']}",
-        f"Preparación: {line['prep']}   {line['course']}", '-' * 32,
-        f"{line['qty']} x {line['name']}", line['format'],
-        *[f"+ {extra['name']}" for extra in line['extras']],
-        *([f"Nota: {line['note']}"] if line['note'] else []), '-' * 32,
-        datetime.now().strftime('%d/%m/%Y %H:%M')])
+def _format_kitchen(order, items, route_name):
+    width = 48
+    lines = ['MARCHAN2  /  PREPARACIÓN', route_name.upper(), '=' * width,
+             f"PEDIDO #{order['id']:04d}",
+             f"MESA: {order['table_name'] or 'VENTA DIRECTA'}",
+             f"PERSONAL: {order.get('user_name') or 'Sin asignar'}",
+             datetime.now().strftime('%d/%m/%Y  %H:%M'), '-' * width]
+    for course in dict.fromkeys(item['course'] for item in items):
+        lines.append(f"[ {course.upper()} ]")
+        for item in (item for item in items if item['course'] == course):
+            lines.append(f"{item['qty']:>3} x  {item['name']}")
+            if item['format']: lines.append(f"       {item['format']}")
+            lines.extend(f"       + {extra['name']}" for extra in item['extras'])
+            if item['note']: lines.append(f"       NOTA: {item['note']}")
+        lines.append('-' * width)
+    lines.append('COMANDA INTERNA · SIN PRECIOS')
+    return '\n'.join(lines)
 
 
 def enqueue_kitchen(c, store, order_id, line_ids):
@@ -194,21 +203,25 @@ def enqueue_kitchen(c, store, order_id, line_ids):
     order = store.order(c, order_id)
     center = c.execute('SELECT center_id FROM tables WHERE id=?', (order['table_id'],)).fetchone() if order['table_id'] else None
     center_id = center['center_id'] if center else None
-    for line in order['lines']:
-        if line['id'] not in line_ids: continue
-        for route in routes:
+    for route in routes:
+        items = []
+        for line in order['lines']:
+            if line['id'] not in line_ids: continue
             if line['prep'] not in json.loads(route['prep_types']): continue
             allowed = json.loads(route['center_ids'])
             if allowed and center_id not in allowed: continue
             if c.execute('SELECT 1 FROM print_job_lines WHERE line_id=? AND route_id=?',
                          (line['id'], route['id'])).fetchone(): continue
-            payload = _format_kitchen(order, line, route['name'])
+            items.append(line)
+        if items:
+            payload = _format_kitchen(order, items, route['name'])
             job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend,
                 raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?)''',
                 (datetime.now().isoformat(timespec='seconds'), 'kitchen', route['printer_name'], 1, payload,
                  route['backend'], route['raw_columns'], route['feed_lines'], route['cut_mode'])).lastrowid
-            c.execute('INSERT OR IGNORE INTO print_job_lines(line_id,route_id,job_id) VALUES(?,?,?)',
-                      (line['id'], route['id'], job))
+            for line in items:
+                c.execute('INSERT OR IGNORE INTO print_job_lines(line_id,route_id,job_id) VALUES(?,?,?)',
+                          (line['id'], route['id'], job))
 
 
 def _format_receipt(order, company, template=None, categories=None):
@@ -218,11 +231,12 @@ def _format_receipt(order, company, template=None, categories=None):
     width = 32 if str(template.get('base', '')).startswith('56 mm') else 48
     separator = '-' * width
     amount = lambda cents: f'{cents / 100:.2f} EUR'
+    aligned = lambda label, value: label[:max(1, width-len(value)-1)].ljust(max(1, width-len(value))) + value
     lines = (template.get('header') or company.get('trade_name') or
              company.get('legal_name') or 'MARCHAN2').splitlines()
     if company.get('tax_id'): lines.append('CIF: ' + company['tax_id'])
     if company.get('address'): lines.append(company['address'])
-    lines.append('DEMOSTRACIÓN · NO FISCAL')
+    lines.extend([separator, 'JUSTIFICANTE DE VENTA', 'DOCUMENTO DE PRUEBA · NO FISCAL', separator])
     if order.get('series_number'):
         lines.append(f"Referencia interna: {order.get('series_name') or ''}-{order['series_number']}")
     identity = []
@@ -232,7 +246,7 @@ def _format_receipt(order, company, template=None, categories=None):
     date = order['paid_at'] or order['created']
     lines.append(date if show('show_time') else date[:10])
     if show('show_unpaid') and order['due'] > 0: lines.append('PENDIENTE DE COBRO')
-    lines.append(separator)
+    lines.extend([separator, aligned('UDS  PRODUCTO', 'IMPORTE'), separator])
     items = list(order['lines'])
     if template.get('line_order') == 'Nombre':
         items.sort(key=lambda item: item['name'].casefold())
@@ -240,7 +254,7 @@ def _format_receipt(order, company, template=None, categories=None):
         items.sort(key=lambda item: (categories.get(item['product_id'], '').casefold(), item['id']))
     taxes = {}
     for item in items:
-        lines.append(f"{item['qty']} x {item['name']}  {amount(item['qty'] * item['price'])}")
+        lines.append(aligned(f"{item['qty']} x {item['name']}", amount(item['qty'] * item['price'])))
         detail = item['format']
         if item['extras']: detail += ' + ' + ', '.join(extra['name'] for extra in item['extras'])
         if show('show_unit_price', 0): detail += f" · {amount(item['price'])} / ud."
@@ -248,21 +262,21 @@ def _format_receipt(order, company, template=None, categories=None):
         lines.append('  ' + detail)
         if show('show_notes', 0) and item['note']: lines.append('  Nota: ' + item['note'])
         taxes[item['tax']] = taxes.get(item['tax'], 0) + item['qty'] * item['price']
-    lines.extend([separator, f"TOTAL PRODUCTOS  {amount(order['total'])}"])
+    lines.extend([separator, aligned('TOTAL PRODUCTOS', amount(order['total']))])
     if show('show_tax'):
         for rate, gross in taxes.items():
             tax = gross - int(gross / (1 + rate / 100) + 0.5)
-            lines.append(f"IVA {rate}% incluido  {amount(tax)}")
+            lines.append(aligned(f"IVA {rate}% incluido", amount(tax)))
     lines.append(separator)
     for payment in order['payments']:
         label = 'EFECTIVO' if payment['method'] == 'cash' else 'TARJETA'
         if show('show_user') and payment.get('user_name'): label += ' · ' + payment['user_name']
-        lines.append(f"{label}  {amount(payment['amount'])}")
+        lines.append(aligned(label, amount(payment['amount'])))
         if show('show_tips') and payment.get('tip'):
-            lines.append(f"Propina  {amount(payment['tip'])}")
+            lines.append(aligned('Propina', amount(payment['tip'])))
         if payment['method'] == 'cash':
             lines.append(f"Recibido {amount(payment['tendered'])} · Cambio {amount(payment['change_due'])}")
-    lines.extend([f"PENDIENTE  {amount(order['due'])}", separator])
+    lines.extend([aligned('PENDIENTE', amount(order['due'])), separator])
     lines.extend((template.get('footer') or 'Gracias por compartir mesa.\nMarchan2 · JoseluIA').splitlines())
     return '\n'.join(lines)
 

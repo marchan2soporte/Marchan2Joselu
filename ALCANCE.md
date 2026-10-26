@@ -1,4 +1,4 @@
-# Alcance funcional de Marchan2 0.19
+# Alcance funcional de Marchan2 0.20
 
 Administración → Puntos de venta → Impresoras permite escoger entre las impresoras instaladas en Windows. El ticket de prueba puede imprimirse manualmente en una cola elegida o automáticamente al completar el cobro; el informe Z de prueba admite otra cola. Se pueden configurar rutas de impresión de cocina para BARRA, COCINA o ambos tipos, opcionalmente filtradas por centro de venta. Al preparar o marchar productos, se crean trabajos con las líneas recién enviadas. También funciona cuando la preparación automática está activada.
 

@@ -1,5 +1,10 @@
 # Cambios de Marchan2
 
+## 0.20
+- Las comandas de una misma preparación se agrupan en una sola impresión por envío, con pedido, mesa, personal, secciones y productos sin precios. La vista del TPV sigue la misma estructura.
+- El justificante de venta de prueba muestra columnas de productos e importes, resumen de IVA y cobros. La salida de texto para impresoras de 80 mm alinea los importes en 48 columnas.
+- El documento sigue marcado como no fiscal. No se ha añadido el logotipo, QR ni contenido de Agora.
+
 ## 0.19
 - Impresión RAW configurable por destino: ancho en caracteres, avance al final y corte ESC/POS completo o parcial opcional. Por defecto usa 48 columnas y cuatro líneas de avance, sin corte.
 - La prueba de impresora incluye una regla de 48 columnas; el texto largo se ajusta al ancho elegido. Las comandas, tickets y Z conservan la configuración usada en cada trabajo. El corte requiere una impresora compatible y debe probarse físicamente.

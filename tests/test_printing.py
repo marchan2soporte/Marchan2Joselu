@@ -53,6 +53,25 @@ class PrintingTests(unittest.TestCase):
             printed.assert_called_once()
         self.assertEqual(printing.jobs(self.store)[0]['status'], 'sent')
 
+    def test_one_kitchen_slip_groups_lines_for_same_route(self):
+        route_id = self.route('BARRA')
+        products = [p for p in self.profile['products'] if p['prep'] == 'BARRA'][:2]
+        self.assertEqual(len(products), 2)
+        order = self.store.mutate('open', {'direct': True}, actor=1)['order_id']
+        for product in products:
+            self.store.mutate('add', {'order_id': order, 'format_id': product['formats'][0]['id']}, actor=1)
+        self.store.mutate('send', {'order_id': order}, actor=1)
+        with self.store.db() as c:
+            jobs = c.execute("SELECT id,payload FROM print_jobs WHERE kind='kitchen'").fetchall()
+            self.assertEqual(len(jobs), 1)
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM print_job_lines WHERE route_id=?',
+                                       (route_id,)).fetchone()[0], 2)
+            for product in products: self.assertIn(product['name'], jobs[0]['payload'])
+            self.assertIn('COMANDA INTERNA', jobs[0]['payload'])
+            self.assertNotIn('EUR', jobs[0]['payload'])
+        self.store.mutate('send', {'order_id': order}, actor=1)
+        self.assertEqual(len(printing.jobs(self.store)), 1)
+
     def test_document_destination_and_automatic_receipt_once(self):
         printing.save_document(self.store, {'profile_id': self.profile_id,
             'kind': 'receipt', 'printer_name': 'Cola Windows Ticket', 'copies': 2,
@@ -131,6 +150,10 @@ class PrintingTests(unittest.TestCase):
         self.assertNotIn('Cuenta #', text)
         self.assertNotIn('VENTA DIRECTA', text)
         self.assertIn('B123', text)
+        self.assertIn('JUSTIFICANTE DE VENTA', text)
+        self.assertIn('DOCUMENTO DE PRUEBA', text)
+        self.assertIn('UDS  PRODUCTO', text)
+        self.assertNotIn('FACTURA SIMPLIFICADA', text)
 
 
 if __name__ == '__main__': unittest.main()

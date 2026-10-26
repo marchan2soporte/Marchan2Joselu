@@ -76,3 +76,13 @@ button{touch-action:manipulation}.button,.pill{min-height:48px;font-size:14px}.p
 @media(max-width:850px){.global-settings-grid{grid-template-columns:1fr}.global-settings-wide{grid-column:auto}}@media(max-width:550px){.global-form-actions{flex-direction:column}.global-form-actions button{width:100%}}
 .pos-profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:22px 0}.pos-profile-card{padding:24px;border-radius:22px;border:1px solid #cfe2dc;box-shadow:0 12px 26px rgba(15,65,55,.06)}.pos-profile-head,.pos-profile-actions{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}.pos-profile-card h3{font-size:1.4rem;margin:20px 0 8px}.pos-profile-card p{min-height:50px;color:#47655f}.pos-profile-form{display:grid;gap:18px;max-height:72vh;overflow:auto}.pos-profile-form section{padding:18px;border:1px solid #d7e5df;border-radius:18px;background:#f7faf8}.pos-profile-form section>.eyebrow{display:block;margin-bottom:12px}.pos-profile-form .form-grid{margin-top:12px}.pos-switches{display:grid;gap:10px}.pos-check{display:flex;align-items:center;gap:12px;font-weight:600}.pos-check input{width:18px;height:18px;accent-color:#147d64}.last-sale-panel{margin-top:22px;padding:20px;display:flex;align-items:center;gap:20px}.last-sale-panel h3{margin:0}.last-sale-panel strong{margin-left:auto;font-size:1.3rem}
 .pos-z-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.pos-profile-form .pos-profile-actions{margin-top:14px;justify-content:flex-start}.pos-profile-form .pos-profile-actions .full{width:100%;margin:4px 0 0;min-height:1.5em}
+/* Paper hierarchy shared by the TPV dialog and administration preview. */
+.receipt .receipt-document-title{font-size:16px;font-weight:800;letter-spacing:1.1px;margin:8px 0}
+.receipt .receipt-column-head{font-size:10px;letter-spacing:1px;color:#4d6263}
+.receipt .receipt-grand-total{font-size:15px;padding:5px 0}
+.receipt .receipt-detail{text-align:left;color:#5e7070;font-size:11px;padding-left:18px}
+.command-receipt h2{font-size:20px;text-transform:uppercase;margin:7px 0}
+.command-receipt h3{text-align:center;font-size:13px;text-transform:uppercase;letter-spacing:1px;margin:12px 0}
+.command-receipt .command-identity{display:grid;gap:3px;font-size:13px}
+.command-receipt .command-identity b{font-size:17px}
+.command-receipt .receipt-row{font-size:15px;margin:5px 0}
