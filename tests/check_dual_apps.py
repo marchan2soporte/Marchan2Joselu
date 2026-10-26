@@ -18,7 +18,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--frozen',action='store_tr
 class Client:
     def __init__(self,app,folder):
         name='Marchan2_TPV.exe' if app=='tpv' else 'Marchan2_Administracion.exe'
-        command=[str(root/'dist/Marchan2_v0.14'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
+        command=[str(root/'dist/Marchan2_v0.15'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
@@ -68,6 +68,10 @@ with tempfile.TemporaryDirectory() as tmp:
             client.request('open',{'direct':True},status=401)
             client.request('login',{'user_id':1,'pin':'0000'},status=400)
         admin.login();assert len(admin.request('analytics/dashboard')['cards'])==4
+        assert admin.request('pos_profiles')[0]['active']
+        assert admin.request('peripheral_ports')['ports'] is not None
+        admin.request('printer_probe',{},status=400)
+        admin.request('scale_probe',{},status=400)
         assert admin.request('ticket_templates')==[]
         admin.request('ticket_template_save',{'name':'QA','base':'80 mm','header':'Cabecera QA',
             'footer':'Pie QA','show_time':True,'show_user':True,'show_tax':True,'is_default':True})
@@ -107,6 +111,9 @@ with tempfile.TemporaryDirectory() as tmp:
         tpv.request('company',status=403)
         tpv.request('series',status=403)
         tpv.request('global_config',status=403)
+        tpv.request('pos_profiles',status=403)
+        tpv.request('printer_probe',{},status=403)
+        assert tpv.request('z_report')['kind']=='z_preview'
         assert tpv.request('state')['ticket_template']['header']=='Cabecera QA'
         assert tpv.request('state')['global_config']['preferences']['stock_warning']
         assert tpv.request('state')['command_template']['header']=='Cabecera QA'

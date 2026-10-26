@@ -1,5 +1,10 @@
 # Cambios de Marchan2
 
+## 0.15
+- Informe Z operativo de prueba en el TPV, con secciones configurables por perfil y datos reales de ventas, cobros, cancelaciones, propinas y cuentas pendientes. Permite vista previa e impresión mediante Windows; no cierra la caja ni emite documentos fiscales.
+- Diagnóstico desde el perfil activo: comprueba si se abre una conexión TCP a una IP local de impresora y enumera/lee puertos COM de balanzas que emitan peso en texto (kg o g). Incorpora velocidad serie configurable.
+- El paquete Windows incluye el controlador serie. La impresión universal sigue usando el diálogo de Windows; el diagnóstico TCP no envía comandos de impresión.
+
 ## 0.14
 - Nuevo apartado «Puntos de venta» con perfiles locales: crear, copiar, editar, activar y eliminar perfiles inactivos.
 - El perfil activo controla cobros (también en el servidor), preparación automática, vista de búsqueda, última venta y plantilla de ticket de prueba. El saldo inicial de referencia aparece en el resumen de efectivo.

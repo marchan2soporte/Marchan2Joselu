@@ -46,8 +46,16 @@ async function showDailyClose(){
   if($('#print-close'))$('#print-close').onclick=()=>window.print();
  }catch(error){toast(error.message,true)}
 }
+async function showZReport(){
+ try{
+  const data=await api('z_report');
+  const sections=data.sections.map(s=>`<h3>${esc(s.title)}</h3>${s.rows.length?`<div class="close-table">${s.rows.map(row=>`<div class="receipt-row"><span>${esc(row[0])}${row.length===3?' · '+esc(row[1]):''}</span><b>${['Importe','Pendiente'].includes(s.columns.at(-1))?euro(row.at(-1)):esc(row.at(-1))}</b></div>`).join('')}</div>`:'<p>Sin movimientos.</p>'}`).join('');
+  openModal(modalTitle('Informe Z de prueba',`${data.day} · ${data.profile}`)+`<div class="receipt"><p>RESUMEN OPERATIVO · NO FISCAL</p><div class="receipt-row"><b>Ventas cerradas</b><b>${euro(data.sales)}</b></div><div class="receipt-row"><b>Cobros registrados</b><b>${euro(data.payments)}</b></div>${sections}<hr><p>${esc(data.note)}</p></div><div class="form-actions"><button class="button secondary" data-close>Volver</button><button class="button primary" id="print-z">Imprimir prueba</button></div>`);
+  $('#print-z').onclick=()=>window.print();
+ }catch(error){toast(error.message,true)}
+}
 const baseRenderTables=renderTables;
-renderTables=function(){baseRenderTables();$('#reload-tables').insertAdjacentHTML('afterend','<button class="button secondary" id="daily-close">Resumen diario</button>');$('#daily-close').onclick=showDailyClose;if(posOptions().show_last_sale&&state.last_sale){$('#main').insertAdjacentHTML('beforeend',`<section class="panel last-sale-panel"><span class="eyebrow">ÚLTIMA VENTA</span><h3>Cuenta #${state.last_sale.id}</h3><strong>${euro(state.last_sale.total)}</strong></section>`)}};
+renderTables=function(){baseRenderTables();$('#reload-tables').insertAdjacentHTML('afterend','<button class="button secondary" id="daily-close">Resumen diario</button><button class="button secondary" id="z-report">Informe Z de prueba</button>');$('#daily-close').onclick=showDailyClose;$('#z-report').onclick=showZReport;if(posOptions().show_last_sale&&state.last_sale){$('#main').insertAdjacentHTML('beforeend',`<section class="panel last-sale-panel"><span class="eyebrow">ÚLTIMA VENTA</span><h3>Cuenta #${state.last_sale.id}</h3><strong>${euro(state.last_sale.total)}</strong></section>`)}};
 const baseRenderKitchen=renderKitchen;
 renderKitchen=async function(){await baseRenderKitchen();if(view!=='kitchen')return;document.querySelectorAll('[data-ready]').forEach(button=>{button.insertAdjacentHTML('beforebegin',`<button class="button secondary" data-command="${button.dataset.ready}">Ver comanda</button>`)});document.querySelectorAll('[data-command]').forEach(button=>button.onclick=async()=>{try{const all=await api('preparation'),selected=all.find(o=>o.id===Number(button.dataset.command));if(selected)showCommand(selected)}catch(error){toast(error.message,true)}})};
 setInterval(()=>{if(currentUser&&view==='kitchen'&&!$('#modal').open)renderKitchen()},5000);

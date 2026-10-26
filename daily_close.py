@@ -6,10 +6,10 @@ import global_config
 import pos_profiles
 
 
-def preview(store, day=None):
+def preview(store, day=None, flags_override=None):
     day = day or date.today().isoformat()
     date.fromisoformat(day)
-    flags = global_config.read(store)['preferences']
+    flags = flags_override if flags_override is not None else global_config.read(store)['preferences']
     opening_float = (pos_profiles.active(store) or {'options': {}})['options'].get('opening_float', 0)
     with store.db() as c:
         closed = [dict(r) for r in c.execute('''SELECT o.id,o.total,o.created_by,

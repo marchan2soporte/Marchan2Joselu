@@ -9,6 +9,8 @@ import global_config
 import ticket_templates
 import daily_close
 import pos_profiles
+import z_report
+import peripherals
 import json
 import os
 from pathlib import Path
@@ -79,7 +81,7 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.14'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.15'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -128,6 +130,8 @@ def main(default_app='tpv'):
                     return self.reply(200,data)
                 if path=='/api/preparation' and args.app=='tpv':return self.reply(200,store.preparation())
                 if path=='/api/daily_close' and args.app=='tpv':return self.reply(200,daily_close.preview(store))
+                if path=='/api/z_report' and args.app=='tpv':return self.reply(200,z_report.preview(store))
+                if path=='/api/peripheral_ports' and args.app=='admin':return self.reply(200,peripherals.serial_ports())
                 if path.startswith('/api/receipt/'):return self.reply(200,store.receipt(int(path.rsplit('/',1)[1])))
                 self.reply(404,{'error':'No encontrado.'})
             except (ValueError,KeyError) as error:self.reply(400,{'error':str(error)})
@@ -175,6 +179,9 @@ def main(default_app='tpv'):
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     handler={'pos_profile_save':pos_profiles.save,'pos_profile_activate':pos_profiles.activate,'pos_profile_delete':pos_profiles.delete}[action]
                     return self.reply(200,handler(store,data))
+                if action in ('printer_probe','scale_probe'):
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,peripherals.printer_probe(store) if action=='printer_probe' else peripherals.scale_probe(store))
                 if action=='shutdown':
                     self.reply(200,{'ok':True});threading.Thread(target=self.server.shutdown,daemon=True).start();return
                 if action in ('supplier','stock_item','stock_move'):

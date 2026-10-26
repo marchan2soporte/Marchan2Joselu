@@ -1,9 +1,15 @@
 """Configuration of the active local point of sale."""
 import json
+import re
+
+Z_OPTIONS = ('sales_by_user', 'sales_by_center', 'payments_by_method',
+             'cancellations', 'tips', 'pending', 'cash_balance', 'sales_by_family')
 
 DEFAULT = {'allow_pay': True, 'auto_prepare': False, 'search_mode': 'categories',
            'show_last_sale': False, 'receipt_template_id': None,
-           'opening_float': 0, 'network_printer': '', 'scale_port': ''}
+           'opening_float': 0, 'network_printer': '', 'printer_port': 9100,
+           'scale_port': '', 'scale_baud': 9600,
+           'z_options': {key: True for key in Z_OPTIONS}}
 
 
 def initialize(store):
@@ -22,6 +28,7 @@ def _decode(row):
         return None
     value = dict(row)
     value['options'] = {**DEFAULT, **json.loads(value.pop('options'))}
+    value['options']['z_options'] = {**DEFAULT['z_options'], **value['options']['z_options']}
     value['active'] = bool(value['active'])
     return value
 
@@ -38,7 +45,9 @@ def active(store):
 
 def active_options(c):
     row = c.execute('SELECT options FROM pos_profiles WHERE active=1 ORDER BY id LIMIT 1').fetchone()
-    return {**DEFAULT, **json.loads(row['options'])} if row else DEFAULT.copy()
+    opts = {**DEFAULT, **json.loads(row['options'])} if row else DEFAULT.copy()
+    opts['z_options'] = {**DEFAULT['z_options'], **opts['z_options']}
+    return opts
 
 
 def save(store, data):
@@ -60,8 +69,14 @@ def save(store, data):
     for field, limit in (('network_printer', 255), ('scale_port', 30)):
         if not isinstance(opts[field], str) or len(opts[field]) > limit:
             raise ValueError('Configuración de dispositivo no válida.')
-    if opts['scale_port'] and not __import__('re').fullmatch(r'COM[1-9][0-9]*', opts['scale_port'].upper()):
+    if opts['scale_port'] and not re.fullmatch(r'COM[1-9][0-9]*', opts['scale_port'].upper()):
         raise ValueError('El puerto de balanza debe ser COM1, COM2, etc.')
+    if type(opts['printer_port']) is not int or not 1 <= opts['printer_port'] <= 65535:
+        raise ValueError('Puerto de impresora no válido.')
+    if opts['scale_baud'] not in (1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200):
+        raise ValueError('Velocidad de balanza no válida.')
+    if not isinstance(opts['z_options'], dict) or set(opts['z_options']) != set(Z_OPTIONS) or any(type(v) is not bool for v in opts['z_options'].values()):
+        raise ValueError('Secciones del informe Z no válidas.')
     template = opts['receipt_template_id']
     if template is not None and (type(template) is not int or template < 1):
         raise ValueError('Plantilla de ticket no válida.')
