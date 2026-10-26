@@ -193,7 +193,7 @@ def main(default_app='tpv'):
                     handlers={'printing_document_save':printing.save_document,
                               'printing_kitchen_save':printing.save_kitchen,
                               'printing_kitchen_delete':printing.delete_kitchen,
-                              'printing_test':lambda s,d:printing.test_print(s,d.get('printer_name'))}
+                              'printing_test':lambda s,d:printing.test_print(s,d.get('printer_name'),d.get('backend','auto'))}
                     result=handlers[action](store,data)
                     if result.get('job_id'):
                         result['print_warnings']=printing.dispatch(store,[result['job_id']])

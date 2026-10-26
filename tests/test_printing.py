@@ -69,5 +69,32 @@ class PrintingTests(unittest.TestCase):
         with self.store.db() as c:
             self.assertEqual(c.execute('SELECT copies FROM print_jobs WHERE id=?', (job['id'],)).fetchone()[0], 2)
 
+    def test_generic_text_driver_uses_raw_and_graphic_driver_uses_gdi(self):
+        with patch('printing.sys.platform', 'win32'), patch('printing._printer_driver', return_value='Generic / Text Only'), \
+             patch('printing.print_raw') as raw, patch('printing.print_gdi') as gdi:
+            printing.print_text('Concod', 'Línea', 2)
+            raw.assert_called_once_with('Concod', 'Línea', 2)
+            gdi.assert_not_called()
+        with patch('printing.sys.platform', 'win32'), patch('printing._printer_driver', return_value='Vendor Graphics'), \
+             patch('printing.print_raw') as raw, patch('printing.print_gdi') as gdi:
+            printing.print_text('Otra', 'Ticket', 1)
+            gdi.assert_called_once_with('Otra', 'Ticket', 1)
+            raw.assert_not_called()
+        self.assertEqual(printing._raw_bytes('España\nTotal'), b'Espa\xa4a\r\nTotal\r\n\x0c')
+
+    def test_selected_backend_is_kept_for_ticket_z_and_kitchen(self):
+        for kind in ('receipt', 'z_report'):
+            printing.save_document(self.store, {'profile_id': self.profile_id,
+                'kind': kind, 'printer_name': 'Concod', 'copies': 1, 'backend': 'raw'})
+        with patch('printing.installed_printers', return_value=['Concod']):
+            self.assertEqual(printing.configuration(self.store, self.profile_id)['documents']['receipt']['backend'], 'raw')
+        self.route('COCINA')
+        order = self.store.mutate('open', {'direct': True}, actor=1)['order_id']
+        self.assertTrue(printing.enqueue_receipt(self.store, order)['configured'])
+        self.assertTrue(printing.enqueue_text(self.store, 'z_report', 'Z de prueba')['configured'])
+        with self.store.db() as c:
+            backends = [row[0] for row in c.execute('SELECT backend FROM print_jobs ORDER BY id')]
+        self.assertEqual(backends, ['raw', 'raw'])
+
 
 if __name__ == '__main__': unittest.main()

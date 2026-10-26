@@ -1,5 +1,9 @@
 # Cambios de Marchan2
 
+## 0.17
+- Corrige la salida en blanco con controladores Windows «Generic / Text Only»: tickets, informe Z, comandas y prueba pueden enviarse como texto RAW. Se puede elegir el modo por destino o dejarlo en detección automática.
+- Los trabajos conservan el modo elegido; la migración añade el ajuste sin reiniciar las colas ni borrar datos. La impresión física debe verificarse con el modelo instalado.
+
 ## 0.16
 - Puntos de venta incorpora destinos de impresión para el ticket y el informe Z de prueba. El ticket puede imprimirse al pulsar el botón o automáticamente al completar el cobro, en una impresora instalada en Windows.
 - Nuevas rutas de impresoras de cocina por tipo de preparación (BARRA, COCINA) y centros de venta. Preparar, Marchar y la preparación automática crean trabajos para las rutas correspondientes.
