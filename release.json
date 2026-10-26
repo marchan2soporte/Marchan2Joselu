@@ -1,12 +1,12 @@
 {
-  "version": "0.18",
+  "version": "0.19",
   "name": "Marchan2",
   "repository": "https://github.com/marchan2soporte/Marchan2Pedro",
-  "portable_directory": "Marchan2_v0.18",
-  "portable_filename": "Marchan2_v0.18_Windows.zip",
+  "portable_directory": "Marchan2_v0.19",
+  "portable_filename": "Marchan2_v0.19_Windows.zip",
   "python": "3.14",
   "validation": {
-    "unit_tests": 59,
+    "unit_tests": 60,
     "source_integration": "passed",
     "frozen_integration": "pending GitHub release build"
   },

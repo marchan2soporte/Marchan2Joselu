@@ -9,10 +9,12 @@ from datetime import datetime
 import json
 import subprocess
 import sys
+import textwrap
 
 PREP_TYPES = ('BARRA', 'COCINA')
 DOCUMENT_TYPES = ('receipt', 'z_report')
 PRINT_BACKENDS = ('auto', 'raw', 'gdi')
+CUT_MODES = ('none', 'full', 'partial')
 
 
 def initialize(store):
@@ -34,8 +36,13 @@ def initialize(store):
             line_id INTEGER NOT NULL, route_id INTEGER NOT NULL, job_id INTEGER NOT NULL,
             PRIMARY KEY(line_id,route_id));''')
         for table in ('kitchen_printer_routes', 'document_printer_routes', 'print_jobs'):
-            if 'backend' not in {row['name'] for row in c.execute(f'PRAGMA table_info({table})')}:
-                c.execute(f"ALTER TABLE {table} ADD COLUMN backend TEXT NOT NULL DEFAULT 'auto'")
+            columns = {row['name'] for row in c.execute(f'PRAGMA table_info({table})')}
+            for field, definition in (('backend', "TEXT NOT NULL DEFAULT 'auto'"),
+                                      ('raw_columns', 'INTEGER NOT NULL DEFAULT 48'),
+                                      ('feed_lines', 'INTEGER NOT NULL DEFAULT 4'),
+                                      ('cut_mode', "TEXT NOT NULL DEFAULT 'none'")):
+                if field not in columns:
+                    c.execute(f'ALTER TABLE {table} ADD COLUMN {field} {definition}')
 
 
 def _backend(data):
@@ -43,6 +50,19 @@ def _backend(data):
     if backend not in PRINT_BACKENDS:
         raise ValueError('Modo de impresión no válido.')
     return backend
+
+
+def _raw_settings(data):
+    columns = data.get('raw_columns', 48)
+    feed = data.get('feed_lines', 4)
+    cut = data.get('cut_mode', 'none')
+    if type(columns) is not int or not 20 <= columns <= 64:
+        raise ValueError('El ancho RAW debe estar entre 20 y 64 caracteres.')
+    if type(feed) is not int or not 0 <= feed <= 8:
+        raise ValueError('El avance debe estar entre 0 y 8 líneas.')
+    if cut not in CUT_MODES:
+        raise ValueError('Modo de corte no válido.')
+    return columns, feed, cut
 
 
 def installed_printers():
@@ -74,7 +94,8 @@ def configuration(store, profile_id=None):
             'SELECT * FROM document_printer_routes WHERE profile_id=?', (profile_id,))}
         for kind in DOCUMENT_TYPES:
             documents.setdefault(kind, {'kind': kind, 'printer_name': '', 'copies': 1,
-                                         'print_mode': 'manual', 'backend': 'auto', 'profile_id': profile_id})
+                                         'print_mode': 'manual', 'backend': 'auto', 'profile_id': profile_id,
+                                         'raw_columns': 48, 'feed_lines': 4, 'cut_mode': 'none'})
     return {'kitchen': kitchen, 'documents': documents, 'printers': installed_printers()}
 
 
@@ -94,16 +115,18 @@ def save_document(store, data):
     if mode == 'always' and not printer:
         raise ValueError('Elige una impresora para imprimir automáticamente.')
     backend = _backend(data)
+    raw_columns, feed_lines, cut_mode = _raw_settings(data)
     with store.db() as c:
         c.execute('BEGIN IMMEDIATE')
         profile_id = int(data['profile_id'])
         if not c.execute('SELECT 1 FROM pos_profiles WHERE id=?', (profile_id,)).fetchone():
             raise ValueError('Punto de venta no encontrado.')
-        c.execute('''INSERT INTO document_printer_routes(profile_id,kind,printer_name,copies,print_mode,backend)
-            VALUES(?,?,?,?,?,?) ON CONFLICT(profile_id,kind) DO UPDATE SET
+        c.execute('''INSERT INTO document_printer_routes(profile_id,kind,printer_name,copies,print_mode,backend,
+            raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(profile_id,kind) DO UPDATE SET
             printer_name=excluded.printer_name,copies=excluded.copies,
-            print_mode=excluded.print_mode,backend=excluded.backend''',
-                  (profile_id, kind, printer, copies, mode, backend))
+            print_mode=excluded.print_mode,backend=excluded.backend,
+            raw_columns=excluded.raw_columns,feed_lines=excluded.feed_lines,cut_mode=excluded.cut_mode''',
+                  (profile_id, kind, printer, copies, mode, backend, raw_columns, feed_lines, cut_mode))
     return {'ok': True}
 
 
@@ -113,6 +136,7 @@ def save_kitchen(store, data):
     preps = data.get('prep_types', [])
     centers = data.get('center_ids', [])
     backend = _backend(data)
+    raw_columns, feed_lines, cut_mode = _raw_settings(data)
     if not 1 <= len(name) <= 80 or not 1 <= len(printer) <= 255:
         raise ValueError('Indica un nombre y una impresora de Windows.')
     if not isinstance(preps, list) or not preps or len(set(preps)) != len(preps) or any(p not in PREP_TYPES for p in preps):
@@ -127,15 +151,18 @@ def save_kitchen(store, data):
         if any(not c.execute('SELECT 1 FROM centers WHERE id=?', (i,)).fetchone() for i in centers):
             raise ValueError('Hay un centro de venta inexistente.')
         if data.get('id'):
-            changed = c.execute('''UPDATE kitchen_printer_routes SET name=?,printer_name=?,prep_types=?,center_ids=?,backend=?
-                WHERE id=? AND profile_id=?''', (name, printer, json.dumps(preps), json.dumps(centers), backend,
+            changed = c.execute('''UPDATE kitchen_printer_routes SET name=?,printer_name=?,prep_types=?,center_ids=?,backend=?,
+                raw_columns=?,feed_lines=?,cut_mode=? WHERE id=? AND profile_id=?''',
+                (name, printer, json.dumps(preps), json.dumps(centers), backend, raw_columns, feed_lines, cut_mode,
                                                    int(data['id']), profile_id)).rowcount
             if not changed: raise ValueError('Ruta de cocina no encontrada.')
             identifier = int(data['id'])
         else:
             identifier = c.execute('''INSERT INTO kitchen_printer_routes
-                (profile_id,name,printer_name,prep_types,center_ids,backend) VALUES(?,?,?,?,?,?)''',
-                (profile_id, name, printer, json.dumps(preps), json.dumps(centers), backend)).lastrowid
+                (profile_id,name,printer_name,prep_types,center_ids,backend,raw_columns,feed_lines,cut_mode)
+                VALUES(?,?,?,?,?,?,?,?,?)''',
+                (profile_id, name, printer, json.dumps(preps), json.dumps(centers), backend,
+                 raw_columns, feed_lines, cut_mode)).lastrowid
     return {'id': identifier}
 
 
@@ -176,9 +203,10 @@ def enqueue_kitchen(c, store, order_id, line_ids):
             if c.execute('SELECT 1 FROM print_job_lines WHERE line_id=? AND route_id=?',
                          (line['id'], route['id'])).fetchone(): continue
             payload = _format_kitchen(order, line, route['name'])
-            job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend)
-                VALUES(?,?,?,?,?,?)''', (datetime.now().isoformat(timespec='seconds'),
-                'kitchen', route['printer_name'], 1, payload, route['backend'])).lastrowid
+            job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend,
+                raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?)''',
+                (datetime.now().isoformat(timespec='seconds'), 'kitchen', route['printer_name'], 1, payload,
+                 route['backend'], route['raw_columns'], route['feed_lines'], route['cut_mode'])).lastrowid
             c.execute('INSERT OR IGNORE INTO print_job_lines(line_id,route_id,job_id) VALUES(?,?,?)',
                       (line['id'], route['id'], job))
 
@@ -264,9 +292,10 @@ def enqueue_receipt(store, order_id, automatic=False):
                 FROM products p JOIN categories c ON c.id=p.category_id''')}
         payload = _format_receipt(order, read_company(store), template, categories)
         try:
-            job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,unique_key,backend)
-                VALUES(?,?,?,?,?,?,?)''', (datetime.now().isoformat(timespec='seconds'),
-                'receipt', route['printer_name'], route['copies'], payload, key, route['backend'])).lastrowid
+            job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,unique_key,backend,
+                raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                (datetime.now().isoformat(timespec='seconds'), 'receipt', route['printer_name'], route['copies'],
+                 payload, key, route['backend'], route['raw_columns'], route['feed_lines'], route['cut_mode'])).lastrowid
         except __import__('sqlite3').IntegrityError:
             return {'configured': True, 'duplicate': True}
     return {'configured': True, 'job_id': job}
@@ -278,26 +307,33 @@ def enqueue_text(store, kind, text):
         route = c.execute('SELECT * FROM document_printer_routes WHERE profile_id=? AND kind=?',
                           (_profile_id(c), kind)).fetchone()
         if not route or not route['printer_name']: return {'configured': False}
-        job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend)
-            VALUES(?,?,?,?,?,?)''', (datetime.now().isoformat(timespec='seconds'),
-            kind, route['printer_name'], route['copies'], text, route['backend'])).lastrowid
+        job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend,
+            raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?)''',
+            (datetime.now().isoformat(timespec='seconds'), kind, route['printer_name'], route['copies'],
+             text, route['backend'], route['raw_columns'], route['feed_lines'], route['cut_mode'])).lastrowid
     return {'configured': True, 'job_id': job}
 
 
-def test_print(store, printer_name, backend='auto'):
+def test_print(store, printer_name, backend='auto', raw_columns=48, feed_lines=4, cut_mode='none'):
     if not isinstance(printer_name, str) or not printer_name.strip() or len(printer_name) > 255:
         raise ValueError('Selecciona una impresora de Windows.')
     return enqueue_text_to_printer(store, printer_name,
-        'MARCHAN2 · PRUEBA DE IMPRESORA\nImpresión desde Administración\nNo es un documento fiscal', backend)
+        'MARCHAN2 · PRUEBA DE IMPRESORA\nImpresión desde Administración\n'
+        '123456789012345678901234567890123456789012345678\nFin de prueba · 80 mm / 48 columnas',
+        backend, raw_columns, feed_lines, cut_mode)
 
 
-def enqueue_text_to_printer(store, printer_name, text, backend='auto'):
+def enqueue_text_to_printer(store, printer_name, text, backend='auto', raw_columns=48,
+                            feed_lines=4, cut_mode='none'):
     backend = _backend({'backend': backend})
+    raw_columns, feed_lines, cut_mode = _raw_settings({'raw_columns': raw_columns,
+        'feed_lines': feed_lines, 'cut_mode': cut_mode})
     with store.db() as c:
         c.execute('BEGIN IMMEDIATE')
-        job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend)
-            VALUES(?,?,?,?,?,?)''', (datetime.now().isoformat(timespec='seconds'),
-            'test', printer_name.strip(), 1, text, backend)).lastrowid
+        job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend,
+            raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?)''',
+            (datetime.now().isoformat(timespec='seconds'), 'test', printer_name.strip(), 1, text,
+             backend, raw_columns, feed_lines, cut_mode)).lastrowid
     return {'configured': True, 'job_id': job}
 
 
@@ -343,13 +379,25 @@ def print_gdi(printer_name, text, copies=1):
         gdi.DeleteDC(hdc)
 
 
-def _raw_bytes(text):
-    # Generic / Text Only expects bytes and Windows-style line endings.
-    normalized = text.replace('\r\n', '\n').replace('\r', '\n').replace('\n', '\r\n')
-    return (normalized + '\r\n\f').encode('cp850', errors='replace')
+def _raw_bytes(text, raw_columns=48, feed_lines=4, cut_mode='none'):
+    raw_columns, feed_lines, cut_mode = _raw_settings({'raw_columns': raw_columns,
+        'feed_lines': feed_lines, 'cut_mode': cut_mode})
+    # Generic / Text Only receives CP850 bytes. Keep every line inside the paper width.
+    wrapper = textwrap.TextWrapper(width=raw_columns, break_long_words=True,
+                                   break_on_hyphens=False, replace_whitespace=False)
+    lines = []
+    for line in text.replace('\r\n', '\n').replace('\r', '\n').split('\n'):
+        if len(line) >= 10 and set(line) in ({'-'}, {'='}):
+            lines.append(line[:raw_columns])
+        else:
+            lines.extend(wrapper.wrap(line) or [''])
+    result = ('\r\n'.join(lines) + '\r\n' + '\r\n' * feed_lines).encode('cp850', errors='replace')
+    if cut_mode != 'none':
+        result += b'\x1d\x56' + (b'\x00' if cut_mode == 'full' else b'\x01')
+    return result
 
 
-def print_raw(printer_name, text, copies=1):
+def print_raw(printer_name, text, copies=1, raw_columns=48, feed_lines=4, cut_mode='none'):
     if sys.platform != 'win32': raise ValueError('La impresión directa requiere Windows.')
     spool = ctypes.WinDLL('winspool.drv', use_last_error=True)
     spool.OpenPrinterW.argtypes = [wintypes.LPWSTR, ctypes.POINTER(wintypes.HANDLE), ctypes.c_void_p]
@@ -374,7 +422,7 @@ def print_raw(printer_name, text, copies=1):
     handle = wintypes.HANDLE()
     if not spool.OpenPrinterW(printer_name, ctypes.byref(handle), None):
         raise ValueError(f'Windows no pudo abrir la cola de impresión ({ctypes.get_last_error()}).')
-    payload = _raw_bytes(text)
+    payload = _raw_bytes(text, raw_columns, feed_lines, cut_mode)
     buffer = ctypes.create_string_buffer(payload)
     doc = DOCINFO1('Marchan2 · texto RAW', None, 'RAW')
     try:
@@ -411,13 +459,16 @@ def _printer_driver(printer_name):
         return ''
 
 
-def print_text(printer_name, text, copies=1, backend='auto'):
+def print_text(printer_name, text, copies=1, backend='auto', raw_columns=48,
+               feed_lines=4, cut_mode='none'):
     backend = _backend({'backend': backend})
+    raw_columns, feed_lines, cut_mode = _raw_settings({'raw_columns': raw_columns,
+        'feed_lines': feed_lines, 'cut_mode': cut_mode})
     if backend == 'auto':
         driver = _printer_driver(printer_name).casefold() if sys.platform == 'win32' else ''
         backend = 'raw' if 'generic' in driver and 'text' in driver else 'gdi'
     if backend == 'raw':
-        print_raw(printer_name, text, copies)
+        print_raw(printer_name, text, copies, raw_columns, feed_lines, cut_mode)
     else:
         print_gdi(printer_name, text, copies)
 
@@ -438,7 +489,8 @@ def dispatch(store, job_ids=None):
             c.execute("UPDATE print_jobs SET status='printing',error='' WHERE id=?", (identifier,))
             job = dict(row)
         try:
-            print_text(job['printer_name'], job['payload'], job['copies'], job['backend'])
+            print_text(job['printer_name'], job['payload'], job['copies'], job['backend'],
+                       job['raw_columns'], job['feed_lines'], job['cut_mode'])
         except Exception as error:
             message = str(error)[:300]
             with store.db() as c:

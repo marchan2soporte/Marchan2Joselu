@@ -73,14 +73,19 @@ class PrintingTests(unittest.TestCase):
         with patch('printing.sys.platform', 'win32'), patch('printing._printer_driver', return_value='Generic / Text Only'), \
              patch('printing.print_raw') as raw, patch('printing.print_gdi') as gdi:
             printing.print_text('Concod', 'Línea', 2)
-            raw.assert_called_once_with('Concod', 'Línea', 2)
+            raw.assert_called_once_with('Concod', 'Línea', 2, 48, 4, 'none')
             gdi.assert_not_called()
         with patch('printing.sys.platform', 'win32'), patch('printing._printer_driver', return_value='Vendor Graphics'), \
              patch('printing.print_raw') as raw, patch('printing.print_gdi') as gdi:
             printing.print_text('Otra', 'Ticket', 1)
             gdi.assert_called_once_with('Otra', 'Ticket', 1)
             raw.assert_not_called()
-        self.assertEqual(printing._raw_bytes('España\nTotal'), b'Espa\xa4a\r\nTotal\r\n\x0c')
+        self.assertEqual(printing._raw_bytes('España\nTotal'),
+                         b'Espa\xa4a\r\nTotal\r\n\r\n\r\n\r\n\r\n')
+        cut = printing._raw_bytes('1234567890\n' + '-' * 48, 32, 2, 'partial')
+        self.assertIn(b'1234567890\r\n', cut)
+        self.assertIn(b'-' * 32 + b'\r\n', cut)
+        self.assertTrue(cut.endswith(b'\r\n\r\n\r\n\x1d\x56\x01'))
 
     def test_selected_backend_is_kept_for_ticket_z_and_kitchen(self):
         for kind in ('receipt', 'z_report'):
@@ -95,6 +100,20 @@ class PrintingTests(unittest.TestCase):
         with self.store.db() as c:
             backends = [row[0] for row in c.execute('SELECT backend FROM print_jobs ORDER BY id')]
         self.assertEqual(backends, ['raw', 'raw'])
+
+    def test_paper_settings_follow_job_and_validate_limits(self):
+        printing.save_document(self.store, {'profile_id': self.profile_id, 'kind': 'receipt',
+            'printer_name': 'Concod', 'copies': 1, 'backend': 'raw',
+            'raw_columns': 48, 'feed_lines': 5, 'cut_mode': 'partial'})
+        order = self.store.mutate('open', {'direct': True}, actor=1)['order_id']
+        job_id = printing.enqueue_receipt(self.store, order)['job_id']
+        with self.store.db() as c:
+            job = c.execute('SELECT raw_columns,feed_lines,cut_mode FROM print_jobs WHERE id=?',
+                            (job_id,)).fetchone()
+        self.assertEqual(tuple(job), (48, 5, 'partial'))
+        with self.assertRaises(ValueError):
+            printing.save_document(self.store, {'profile_id': self.profile_id, 'kind': 'receipt',
+                'printer_name': 'Concod', 'copies': 1, 'raw_columns': 100})
 
     def test_text_only_ticket_respects_selected_template(self):
         order = self.store.mutate('open', {'direct': True}, actor=1)['order_id']

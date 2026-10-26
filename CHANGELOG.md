@@ -1,5 +1,9 @@
 # Cambios de Marchan2
 
+## 0.19
+- Impresión RAW configurable por destino: ancho en caracteres, avance al final y corte ESC/POS completo o parcial opcional. Por defecto usa 48 columnas y cuatro líneas de avance, sin corte.
+- La prueba de impresora incluye una regla de 48 columnas; el texto largo se ajusta al ancho elegido. Las comandas, tickets y Z conservan la configuración usada en cada trabajo. El corte requiere una impresora compatible y debe probarse físicamente.
+
 ## 0.18
 - La vista previa del editor de plantillas y «Ver cuenta» del TPV comparten ahora el mismo diseño de ticket, con los mismos campos y opciones. El TPV refresca la plantilla activa al abrir la cuenta.
 - Administración muestra qué plantilla usa el TPV activo y permite asignar al puesto el diseño editado al guardarlo. La salida de texto RAW incorpora más campos y opciones de la plantilla; las imágenes siguen limitadas a la salida gráfica.
