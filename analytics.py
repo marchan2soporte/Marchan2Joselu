@@ -19,6 +19,7 @@ REPORT_GROUPS={
 LIVE={'Análisis de ventas','Evolución de ventas','Comparativa interanual','Resumen de impuestos','Familias y productos','Categorías y productos','Histórico de ventas','Top 50 formatos','Top 50 productos','Ventas diarias','Rendimiento de usuarios','Productos por usuario','Centros de venta','Ventas por ubicación','Productos por centro de venta','Operaciones por centro de venta','Formas de pago','Cobros pendientes','Diario de ventas'}
 INVENTORY_REPORTS={'Análisis de compras','Análisis de stocks','Entradas detalladas por proveedor','Compras por proveedor','Precios de compra','Stock por producto','Histórico de compras','Movimientos por producto','Valoración de mermas'}
 LIVE.update(INVENTORY_REPORTS)
+LIVE.update({'Movimientos de caja','Diario de cierres de caja'})
 DEPENDENCIES={'Visión del negocio':'compras, existencias y costes de adquisición','Locales':'locales y periodos de servicio vinculados a cada operación','Evolución':'reservas, invitaciones o integración fiscal, según el informe','Carta y rentabilidad':'costes históricos, menús, promociones o alérgenos vinculados a los productos','Equipo':'descuentos, cancelaciones y periodos de servicio','Espacios':'número de comensales registrado en cada cuenta','Cobros y caja':'tarifas, movimientos de caja y propinas','Servicios':'periodos de servicio vinculados a cada operación','Clientes':'clientes vinculados a ventas y documentos','Almacén':'recepciones, compras y movimientos de existencias','Cocina':'marcas de tiempo de envío y finalización de cada línea','Diarios':'documentos y cierres de caja'}
 
 def report_catalog():
@@ -60,6 +61,9 @@ def report(store,name,start,end):
  if name in INVENTORY_REPORTS:
   import inventory
   return inventory.report(store,name,start,end)
+ if name in ('Movimientos de caja','Diario de cierres de caja'):
+  import cash_register
+  return cash_register.analytics_report(store,name,start,end)
  orders,payments,lines=records(store,start,end)
  cols=[];rows=[];note='Ventas de cuentas cerradas, con IVA incluido, por fecha de cierre. No incluye cuentas abiertas. Las cuentas divididas cerradas cuentan por separado.'
  if name in ('Análisis de ventas','Histórico de ventas','Diario de ventas'):

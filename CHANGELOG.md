@@ -1,5 +1,15 @@
 # Cambios de Marchan2
 
+## 0.22
+- Calculadora habilitable por puesto, descuentos porcentuales o por unidad y porciones al peso en productos configurados por KG. Precios, pesos y cambios quedan registrados; los cobros usan céntimos enteros.
+- Cuenta de venta hasta abajo, calculadora segura, multiplicador de unidades y acciones a la derecha.
+- Otros con cancelación completa auditada, impresión, cambio de mesa, gastos, ingresos, retiradas, arqueo, X/Z, historial y última cuenta.
+- Editor visual de botones por puesto, con arrastre y controles táctiles de orden y zona; conserva los permisos.
+- Apertura obligatoria con fondo, jornada local persistente, aviso de jornada anterior, recuento por denominaciones y cierre con diferencia justificada.
+- Informes X de consulta y Z inmutables, reimpresión e historial en Administración, más informes de movimientos y cierres.
+- Las cuentas con pagos no pueden cancelarse y el cierre exige resolver cuentas abiertas. Los cobros anteriores a la migración conservan su histórico sin volver a contarse en caja.
+- 86 pruebas Python, cuatro de calculadora y pruebas de ambos ejecutables con caja, permisos, layout y cobros.
+
 ## 0.21
 - Perfiles de usuario editables en Administración, con 18 permisos asociados a las operaciones disponibles del TPV. Incluye Administrador, Encargado y Camarero; los usuarios existentes conservan su acceso al migrar.
 - La asignación de perfil se guarda por usuario y el servidor comprueba permisos en cada petición del TPV, incluso cuando el perfil cambia durante una sesión abierta. Las acciones sin permiso se desactivan también en la interfaz.

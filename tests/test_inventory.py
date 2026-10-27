@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import unittest,tempfile
 from pathlib import Path
 from store import Store
@@ -6,6 +7,7 @@ import inventory
 class InventoryTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.store=Store(Path(self.tmp.name)/'x.db');inventory.initialize(self.store)
+  open_test_cash(self.store)
   inventory.mutate(self.store,'supplier',{'name':'Proveedor'},1);inventory.mutate(self.store,'stock_item',{'name':'Harina','unit':'KG'},1)
  def tearDown(self):self.tmp.cleanup()
  def move(self,**kwargs):

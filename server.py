@@ -13,6 +13,9 @@ import z_report
 import peripherals
 import printing
 import permissions
+import cash_register
+import button_layout
+import line_pricing
 import json
 import os
 from pathlib import Path
@@ -25,7 +28,7 @@ import threading
 import webbrowser
 from store import Store
 
-TPV_ACTIONS={'open','add','quantity','send','march','course','note','move','pay','split_pay','ready','close_empty','cancel_line'}
+TPV_ACTIONS={'open','add','quantity','send','march','course','note','move','pay','split_pay','ready','close_empty','cancel_line','cancel_ticket'}
 ADMIN_ACTIONS={'product','category','center','user','user_disable'}
 
 
@@ -78,12 +81,12 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
-                if path in ('/app.js','/receipt.js','/style.css','/global-config.js','/printing-admin.js','/user-profiles.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
+                if path in ('/app.js','/receipt.js','/style.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.16'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.22'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -114,9 +117,20 @@ def main(default_app='tpv'):
                     if path=='/api/analytics/dashboard':return self.reply(200,dashboard(store))
                     if path=='/api/analytics/report':return self.reply(200,report(store,q.get('id',[''])[0],q.get('start',[''])[0],q.get('end',[''])[0]))
                     return self.reply(404,{'error':'Informe no encontrado.'})
+                if path=='/api/button_layout':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    profile_id=int(parse_qs(urlparse(self.path).query).get('profile_id',[0])[0]) or None
+                    return self.reply(200,button_layout.read(store,profile_id))
+                if path in ('/api/cash','/api/cash/history'):
+                    if args.app=='tpv':permissions.require(store,user['id'],'cash_view')
+                    if path.endswith('/history'):return self.reply(200,cash_register.history(store))
+                    q=parse_qs(urlparse(self.path).query)
+                    return self.reply(200,cash_register.report(store,int(q.get('session_id',[0])[0]) or None,q.get('kind',['x'])[0]))
                 if path=='/api/state':
                     data=store.state();data['user']=user;data['pos_profile']=pos_profiles.active(store)
                     with store.db() as c:data['permissions']=permissions.rights(c,user['id'])
+                    data['cash_session']=cash_register.status(store)
+                    data['button_layout']=button_layout.read(store)
                     data['ticket_template']=ticket_templates.current(store)
                     profile_template=data['pos_profile']['options']['receipt_template_id'] if data['pos_profile'] else None
                     if profile_template:
@@ -150,6 +164,12 @@ def main(default_app='tpv'):
                 if path=='/api/print_jobs':
                     if args.app=='tpv':permissions.require(store,user['id'],'print_retry')
                     return self.reply(200,printing.jobs(store))
+                if path=='/api/last_receipt':
+                    if args.app!='tpv':return self.reply(403,{'error':'Solo TPV.'})
+                    permissions.require(store,user['id'],'ticket_print')
+                    with store.db() as c:last=c.execute("SELECT id FROM orders WHERE status='paid' ORDER BY paid_at DESC,id DESC LIMIT 1").fetchone()
+                    if not last:raise ValueError('Todavía no hay cuentas cobradas.')
+                    return self.reply(200,store.receipt(last['id']))
                 if path.startswith('/api/receipt/'):
                     if args.app=='tpv':permissions.require(store,user['id'],'ticket_print')
                     return self.reply(200,store.receipt(int(path.rsplit('/',1)[1])))
@@ -184,6 +204,15 @@ def main(default_app='tpv'):
                     return self.reply(200,{'ok':True})
                 user=self.user()
                 if not user:return self.reply(401,{'error':'La sesión ha terminado. Entra con tu usuario.'})
+                if action in ('line_discount','line_weight'):
+                    if args.app!='tpv':return self.reply(403,{'error':'Los cambios de línea se realizan en el TPV.'})
+                    return self.reply(200,line_pricing.mutate(store,action,data,user['id']))
+                if action=='button_layout_save':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,button_layout.save(store,data,user['id']))
+                if action in ('cash_open','cash_move','cash_close'):
+                    if args.app!='tpv':return self.reply(403,{'error':'Las operaciones de caja se realizan desde el TPV.'})
+                    return self.reply(200,cash_register.mutate(store,action,data,user['id']))
                 if action=='company':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,company.save(store,data))
@@ -224,6 +253,10 @@ def main(default_app='tpv'):
                     permissions.require(store,user['id'],'ticket_print' if kind=='receipt' else 'z_print')
                     if kind=='receipt':
                         result=printing.enqueue_receipt(store,int(data['order_id']))
+                    elif kind in ('cash_x','cash_z'):
+                        permissions.require(store,user['id'],'cash_view')
+                        report=cash_register.report(store,int(data.get('session_id',0)) or None,'z' if kind=='cash_z' else 'x')
+                        result=printing.enqueue_text(store,'z_report',cash_register.text_report(report))
                     elif kind=='z_report':
                         report=z_report.preview(store)
                         lines=['MARCHAN2 · INFORME Z DE PRUEBA',report['day'],
@@ -260,6 +293,9 @@ def main(default_app='tpv'):
                         with store.db() as c:
                             row=c.execute('SELECT kitchen FROM lines WHERE id=?',(data.get('line_id'),)).fetchone()
                         if row and row['kitchen']!='new':permissions.require(store,user['id'],'ticket_cancel_prepared')
+                    if action=='cancel_ticket':
+                        with store.db() as c:
+                            if c.execute("SELECT 1 FROM lines WHERE order_id=? AND kitchen<>'new'",(data.get('order_id'),)).fetchone():permissions.require(store,user['id'],'ticket_cancel_prepared')
                 result=store.mutate(action,data,actor=user['id'])
                 if args.app=='tpv':
                     if action in ('pay','split_pay') and result.get('receipt',{}).get('status')=='paid':

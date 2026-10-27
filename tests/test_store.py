@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import unittest
 import tempfile
 from pathlib import Path
@@ -10,6 +11,7 @@ class StoreTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.path=Path(self.temp.name)/'test.db'
         self.store=Store(self.path)
+        open_test_cash(self.store)
         self.catalog=self.store.state()
 
     def tearDown(self):self.temp.cleanup()

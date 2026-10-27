@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +14,7 @@ class GlobalConfigTests(unittest.TestCase):
     def test_command_template_selection_and_daily_summary_flags(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
+            open_test_cash(store)
             series.initialize(store)
             ticket_templates.initialize(store)
             template_id = ticket_templates.save(store, {'name': 'Comanda interna', 'base': '80 mm',
@@ -37,6 +39,7 @@ class GlobalConfigTests(unittest.TestCase):
     def test_series_assignment_and_validation(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
+            open_test_cash(store)
             series.initialize(store)
             identity = series.save(store, {'name': 'F', 'type': 'Factura', 'next_number': 1})['id']
             values = dict.fromkeys(global_config.SERIES_TYPES)
@@ -51,6 +54,7 @@ class GlobalConfigTests(unittest.TestCase):
     def test_preferences_are_saved_and_validated(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
+            open_test_cash(store)
             series.initialize(store)
             payload = global_config.read(store)
             payload['preferences']['stock_warning'] = True
@@ -67,6 +71,7 @@ class GlobalConfigTests(unittest.TestCase):
     def test_consolidation_setting_changes_tpv_line_behavior(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
+            open_test_cash(store)
             series.initialize(store)
             order_id = store.mutate('open', {'direct': True})['order_id']
             product = next(p for p in store.state()['products'] if p['formats'])
@@ -83,6 +88,7 @@ class GlobalConfigTests(unittest.TestCase):
     def test_prepared_line_requires_reason_when_configured(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
+            open_test_cash(store)
             series.initialize(store)
             settings = global_config.read(store)
             settings['preferences']['cancel_reason'] = True
@@ -104,6 +110,7 @@ class GlobalConfigTests(unittest.TestCase):
     def test_paid_test_receipts_get_unique_internal_series_reference(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
+            open_test_cash(store)
             series.initialize(store)
             identity = series.save(store, {'name': 'T', 'type': 'Fra. Simp.',
                                            'next_number': 12})['id']
@@ -126,6 +133,7 @@ class GlobalConfigTests(unittest.TestCase):
     def test_tip_is_recorded_separately_from_sale_and_close_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp) / 'test.db')
+            open_test_cash(store)
             series.initialize(store)
             settings = global_config.read(store)
             settings['preferences']['include_tips'] = True

@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ class PrintingTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.store = Store(Path(self.tmp.name) / 'test.db')
+        open_test_cash(self.store)
         self.profile = self.store.state()
         with self.store.db() as c:
             self.profile_id = c.execute('SELECT id FROM pos_profiles WHERE active=1').fetchone()[0]

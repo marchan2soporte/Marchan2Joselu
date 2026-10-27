@@ -33,7 +33,7 @@ La copia inicial no recrea las antiguas páginas de Releases ni sus archivos adj
 
 ## Puntos detectados para futuras modificaciones
 
-- El servidor anuncia todavía `0.16` en `/api/access`, mientras la base y el paquete indican `0.21`.
-- Algunas notas del README siguen describiendo perfiles fijos, aunque el código más reciente permite perfiles de usuario editables.
+- El desfase de versión de `/api/access` se ha corregido en la ampliación 0.22.
+- La descripción de perfiles editables del README se ha actualizado en 0.22.
 - Los dos ejecutables utilizan por defecto `%LOCALAPPDATA%\Marchan2`. Para probar esta copia junto a otra versión, iniciar con `--data` en una carpeta independiente.
 - La impresión física depende de las colas, controladores y equipos instalados. Las pruebas automatizadas usan sustitutos y datos temporales, sin imprimir.

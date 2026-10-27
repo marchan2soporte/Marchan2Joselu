@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import sys
 import tempfile
 import types
@@ -16,6 +17,7 @@ class ZAndPeripheralTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.store = Store(Path(self.tmp.name) / 'test.db')
+        open_test_cash(self.store)
 
     def update_options(self, **values):
         profile = pos_profiles.active(self.store)

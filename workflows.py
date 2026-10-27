@@ -58,6 +58,11 @@ class WorkflowMixin:
         initialize_printing(self)
         from permissions import initialize as initialize_permissions
         initialize_permissions(self)
+        import cash_register,button_layout
+        cash_register.initialize(self)
+        button_layout.initialize(self)
+        import line_pricing
+        line_pricing.initialize(self)
 
     def users(self,active_only=True):
         with self.db() as c:
@@ -77,6 +82,8 @@ class WorkflowMixin:
 
     def order(self,c,oid):
         result=super().order(c,oid)
+        import line_pricing
+        for line in result['lines']:line_pricing.labels(line)
         result['payments']=[dict(r) for r in c.execute('SELECT p.*,u.name user_name FROM payments p LEFT JOIN users u ON u.id=p.user_id WHERE order_id=? ORDER BY p.id',(oid,))]
         result['paid']=sum(p['amount'] for p in result['payments'])
         result['due']=result['total']-result['paid']
@@ -113,9 +120,13 @@ class WorkflowMixin:
         if tip>10000:raise ValueError('La propina no puede superar 100 € por cobro.')
         tendered=money(data.get('tendered',0)) if method=='cash' else amount+tip
         if tendered<amount+tip:raise ValueError('El efectivo recibido no cubre el importe y la propina.')
+        import cash_register
+        active_session=cash_register.require_open(c)
         now=datetime.now().isoformat(timespec='seconds')
-        c.execute('INSERT INTO payments(order_id,amount,method,tendered,change_due,tip,created,user_id,request_id) VALUES(?,?,?,?,?,?,?,?,?)',
-                  (order['id'],amount,method,tendered,tendered-amount-tip,tip,now,actor,data.get('request_id')))
+        c.execute('INSERT INTO payments(order_id,amount,method,tendered,change_due,tip,created,user_id,request_id,cash_session_id) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                  (order['id'],amount,method,tendered,tendered-amount-tip,tip,now,actor,data.get('request_id'),active_session['id']))
+        c.execute('UPDATE cash_sessions SET revision=revision+1 WHERE id=?',(active_session['id'],))
+        c.execute('UPDATE orders SET cash_session_id=? WHERE id=?',(active_session['id'],order['id']))
         paid=order['paid']+amount
         if paid==order['total']:
             methods={r[0] for r in c.execute('SELECT method FROM payments WHERE order_id=?',(order['id'],))}
@@ -131,7 +142,7 @@ class WorkflowMixin:
         return {'receipt':self.order(c,order['id']),'paid_now':amount,'tip':tip,'change':tendered-amount-tip}
 
     def mutate(self,action,data,actor=None):
-        extended={'pay','split_pay','march','course','note','move','cancel_line','user','user_disable'}
+        extended={'pay','split_pay','march','course','note','move','cancel_line','cancel_ticket','user','user_disable'}
         if action not in extended:return super().mutate(action,data,actor)
         with self.db() as c:
             c.execute('BEGIN IMMEDIATE')
@@ -165,7 +176,11 @@ class WorkflowMixin:
                     if current:c.execute('UPDATE users SET name=?,pin_hash=?,role=?,profile_id=?,active=1 WHERE id=?',(name,hashed,role,profile_id,uid))
                     else:c.execute('INSERT INTO users(name,pin_hash,role,profile_id) VALUES(?,?,?,?)',(name,hashed,role,profile_id))
                 return {'ok':True}
+            import cash_register
+            active_session=cash_register.require_open(c)
             order=self.require_open(c,data['order_id'])
+            c.execute('UPDATE orders SET cash_session_id=? WHERE id=?',(active_session['id'],order['id']))
+            if action=='cancel_ticket':return cash_register.cancel_ticket(self,c,order,data,actor)
             if action=='cancel_line':
                 if order['paid']:raise ValueError('La cuenta tiene pagos parciales. No se puede cancelar esta línea.')
                 line_id=int(data['line_id'])
@@ -196,7 +211,7 @@ class WorkflowMixin:
                 if amount!=int(data['expected_amount']):raise ValueError('El importe seleccionado ha cambiado.')
                 if all(wanted.get(r['id'])==r['qty'] for r in order['lines']):return self.take_payment(c,order,data,actor)
                 child=c.execute('INSERT INTO orders(created,created_by,parent_id,source_label) VALUES(?,?,?,?)',(datetime.now().isoformat(timespec='seconds'),actor,order['id'],(order['center_name'] or '')+' '+(order['table_name'] or 'VENTA DIRECTA'))).lastrowid
-                columns=['product_id','format_id','name','format','price','qty','tax','extras','note','prep','course','kitchen']
+                columns=['product_id','format_id','name','format','price','qty','tax','extras','note','prep','course','kitchen','base_price','reference_price','is_weighed','weight_milli','discount_kind','discount_value','pricing_revision']
                 for lid,qty in wanted.items():
                     line=originals[lid]
                     if qty==line['qty']:c.execute('UPDATE lines SET order_id=? WHERE id=?',(child,lid))

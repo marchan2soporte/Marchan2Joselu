@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,7 @@ class PermissionTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.store = Store(Path(self.temp.name) / 'permissions.db')
+        open_test_cash(self.store)
 
     def test_existing_users_keep_access_and_profile_changes_apply_now(self):
         self.store.mutate('user', {'name': 'ANA', 'pin': '4567', 'role': 'staff'}, 1)

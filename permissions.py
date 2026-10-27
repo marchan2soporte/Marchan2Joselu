@@ -16,19 +16,27 @@ CATALOG = {
     'ticket_print': 'Ticket: Imprimir',
     'kitchen_view': 'Pedidos: Mostrar preparaciones',
     'kitchen_ready': 'Pedido: Marcar como preparado',
-    'z_view': 'TPV: Ver informe Z de prueba',
-    'z_print': 'TPV: Imprimir Z de prueba',
+    'z_view': 'TPV: Ver resumen Z anterior (compatibilidad)',
+    'z_print': 'Caja: Imprimir informes X y Z',
     'daily_view': 'TPV: Ver resumen diario',
     'print_retry': 'Impresión: Reintentar trabajo',
 }
+NEW_CASH_RIGHTS={'ticket_void':'Ticket: Cancelar cuenta completa',
+    'cash_open':'Caja: Abrir jornada','cash_view':'Caja: Ver X, arqueos y cierres',
+    'cash_move':'Caja: Registrar ingresos, gastos y retiradas','cash_close':'Caja: Cerrar jornada'}
+PREVIOUS_ALL=set(CATALOG)
+CATALOG.update(NEW_CASH_RIGHTS)
+PREVIOUS_PRICING_ALL=set(CATALOG)
+NEW_PRICING_RIGHTS={'ticket_discount':'Ticket: Aplicar o quitar descuentos de línea','ticket_weight':'Ticket: Cambiar peso de una porción'}
+CATALOG.update(NEW_PRICING_RIGHTS)
 ALL = list(CATALOG)
 WAITER = [key for key in ALL if key not in
-          ('ticket_cancel_prepared', 'ticket_pay', 'z_view', 'z_print', 'print_retry')]
+          ('ticket_cancel_prepared', 'ticket_pay', 'z_view', 'z_print', 'print_retry',*NEW_CASH_RIGHTS,*NEW_PRICING_RIGHTS)]
 ACTION = {'open': 'ticket_open', 'close_empty': 'ticket_open', 'add': 'ticket_add',
           'quantity': 'ticket_quantity', 'note': 'ticket_note', 'course': 'ticket_course',
           'cancel_line': 'ticket_cancel', 'send': 'ticket_send', 'march': 'ticket_march',
           'move': 'ticket_move', 'pay': 'ticket_pay', 'split_pay': 'ticket_pay',
-          'ready': 'kitchen_ready'}
+          'ready': 'kitchen_ready','cancel_ticket':'ticket_void'}
 
 
 def initialize(store):
@@ -41,6 +49,17 @@ def initialize(store):
         for name, rights in [('Administrador', ALL), ('Encargado', ALL), ('Camarero', WAITER)]:
             c.execute('INSERT OR IGNORE INTO user_profiles(name,permissions,protected) VALUES(?,?,1)',
                       (name, json.dumps(rights)))
+        marker=c.execute("SELECT value FROM settings WHERE key='cash_permissions_v022'").fetchone()
+        if not marker:
+            manager=c.execute("SELECT id,permissions FROM user_profiles WHERE name='Encargado' AND protected=1").fetchone()
+            if manager and set(json.loads(manager['permissions']))==PREVIOUS_ALL:
+                c.execute('UPDATE user_profiles SET permissions=? WHERE id=?',(json.dumps(ALL),manager['id']))
+            c.execute("INSERT INTO settings(key,value) VALUES('cash_permissions_v022','1')")
+        if not c.execute("SELECT 1 FROM settings WHERE key='pricing_permissions_v022'").fetchone():
+            manager=c.execute("SELECT id,permissions FROM user_profiles WHERE name='Encargado' AND protected=1").fetchone()
+            if manager and set(json.loads(manager['permissions']))==PREVIOUS_PRICING_ALL:
+                c.execute('UPDATE user_profiles SET permissions=? WHERE id=?',(json.dumps(ALL),manager['id']))
+            c.execute("INSERT INTO settings(key,value) VALUES('pricing_permissions_v022','1')")
         admin_id = c.execute("SELECT id FROM user_profiles WHERE name='Administrador'").fetchone()[0]
         manager_id = c.execute("SELECT id FROM user_profiles WHERE name='Encargado'").fetchone()[0]
         c.execute('UPDATE users SET profile_id=CASE WHEN role=? THEN ? ELSE ? END WHERE profile_id IS NULL',

@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import unittest,tempfile
 from pathlib import Path
 from datetime import date
@@ -8,6 +9,7 @@ from analytics import dashboard,report,report_catalog
 class AnalyticsTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.store=Store(Path(self.tmp.name)/'data.db');inventory.initialize(self.store)
+  open_test_cash(self.store)
  def tearDown(self):self.tmp.cleanup()
  def sale(self,when,total,method='card'):
   with self.store.db() as c:

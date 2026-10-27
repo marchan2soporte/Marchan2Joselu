@@ -1,10 +1,10 @@
-# Alcance funcional de Marchan2 0.21
+# Alcance funcional de Marchan2 0.22
 
 Administración → Puntos de venta → Impresoras permite escoger entre las impresoras instaladas en Windows. El ticket de prueba puede imprimirse manualmente en una cola elegida o automáticamente al completar el cobro; el informe Z de prueba admite otra cola. Se pueden configurar rutas de impresión de cocina para BARRA, COCINA o ambos tipos, opcionalmente filtradas por centro de venta. Al preparar o marchar productos, se crean trabajos con las líneas recién enviadas. También funciona cuando la preparación automática está activada.
 
 Una prueba envía una hoja real. Los trabajos se guardan con estado y error; se pueden reintentar si la impresora falla. La venta y la comanda no se deshacen por un fallo de impresión. La vista previa de Plantillas de ticket usa el mismo generador HTML que «Ver cuenta» del TPV. Se puede asignar una plantilla al puesto activo al guardarla. Las colas de texto RAW reciben un equivalente textual de los datos y opciones; las imágenes y el diseño gráfico requieren una impresora/controlador que los admita. La impresión directa admite texto RAW para colas «Generic / Text Only» y salida gráfica para otros controladores; el modo automático detecta el nombre del controlador. El ancho RAW se limita a las columnas configuradas y cada trabajo añade las líneas de avance elegidas. El corte completo o parcial envía comandos ESC/POS únicamente cuando se selecciona; depende de que el modelo tenga cortador y soporte ese protocolo. La recepción en la cola no garantiza que salga papel, por lo que hay que probarla físicamente. No usa un protocolo universal por IP ni emite documentos fiscales. La entrega física y el formato final dependen de la impresora instalada y deben verificarse con el equipo real. Proformas, facturas, albaranes, entradas y apertura de cajón todavía no se emiten desde Marchan2.
 
-El TPV ofrece un informe Z operativo **de prueba** con vista previa e impresión mediante Windows. Las secciones se eligen en Administración → Puntos de venta para el perfil activo: ventas por usuario o centro, cobros por forma de pago, cancelaciones, propinas, cuentas pendientes, efectivo teórico y ventas por familia. Se alimenta de operaciones registradas; no realiza cierre contable, arqueo físico ni emisión fiscal.
+El TPV permite abrir la jornada con un fondo real, registrar movimientos, contar efectivo y cerrar con un Z operativo guardado. El X consulta la jornada abierta. El Z puede reimprimirse sin recalcular, e incluye la diferencia del contado y los movimientos; no emite documentos fiscales. Las secciones adicionales del puesto se incorporan al informe; los datos mínimos de cuadre se conservan siempre.
 
 En el perfil activo se puede comprobar una IP local y puerto TCP de impresora, sin enviar papel. Windows permite imprimir los tickets de prueba a cualquier impresora instalada, incluida una de red. El diagnóstico de balanza enumera puertos COM y lee una línea de texto con velocidad configurable; interpreta kg o g si la balanza lo transmite así. La incorporación del peso a artículos de venta requiere conocer el protocolo y el modelo de balanza, y aún no se realiza.
 
@@ -30,7 +30,7 @@ Siguen pendientes: recargo por servicio, datos de comensales e invitaciones, dev
 
 Administración → Plantillas de ticket permite crear, copiar, editar y eliminar diseños de prueba; elegir 56 mm, variantes de 80 mm o A4; añadir texto e imágenes PNG/JPEG pequeñas a cabecera y pie; y configurar orden de productos, hora, usuario, impuestos orientativos, notas, ubicación, identificador interno, precio unitario y propinas. La plantilla predeterminada se aplica al detalle imprimible de las cuentas en TPV y Administración. La vista previa usa datos ficticios. La impresión directa a una cola de Windows usa una versión de texto del ticket; si no hay cola asignada, se abre el diálogo del sistema con el diseño visual. Las imágenes no se incluyen en la impresión directa de texto. No se generan facturas fiscales ni códigos QR fiscales.
 
-28 informes disponibles de 69 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.
+30 informes disponibles de 69 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.
 
 | Área | Informe | Estado |
 |---|---|---|
@@ -75,7 +75,7 @@ Administración → Plantillas de ticket permite crear, copiar, editar y elimina
 | Espacios | Operaciones por centro de venta | Disponible |
 | Cobros y caja | Formas de pago | Disponible |
 | Cobros y caja | Tarifas | Pendiente |
-| Cobros y caja | Movimientos de caja | Pendiente |
+| Cobros y caja | Movimientos de caja | Disponible |
 | Cobros y caja | Cobros pendientes | Disponible |
 | Cobros y caja | Propinas por formas de pago | Pendiente |
 | Servicios | Productos por periodo de servicio | Pendiente |
@@ -101,5 +101,11 @@ Administración → Plantillas de ticket permite crear, copiar, editar y elimina
 | Diarios | Diario de facturas | Pendiente |
 | Diarios | Diario de albaranes | Pendiente |
 | Diarios | Diario de pedidos | Pendiente |
-| Diarios | Diario de cierres de caja | Pendiente |
+| Diarios | Diario de cierres de caja | Disponible |
 | Diarios | Diario de ventas | Disponible |
+
+## Caja operativa en 0.22
+La apertura con efectivo, ingresos, gastos, retiradas, arqueo y cierre Z están implementados para la caja local. El X es provisional; el Z guarda un cierre inmutable. El diario nuevo solo incluye las jornadas registradas desde esta versión. Los informes no realizan una declaración fiscal ni implementan TicketBAI.
+
+## Precios de línea y peso en 0.22
+La calculadora puede ocultarse por puesto desde Botones. Aplica descuentos de línea (porcentaje o importe por unidad) y modifica el peso de una porción configurada por KG. Cada porción mantiene cantidad 1 e importe calculado a céntimos; las estadísticas de unidades cuentan porciones. Cocina recibe el peso sin precio. No hay descuento global del ticket ni uso automático de la lectura de balanza para vender. Las cuentas parcialmente cobradas no pueden cambiarse de precio o peso.

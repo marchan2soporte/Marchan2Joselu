@@ -18,7 +18,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--frozen',action='store_tr
 class Client:
     def __init__(self,app,folder):
         name='Marchan2_TPV.exe' if app=='tpv' else 'Marchan2_Administracion.exe'
-        command=[str(root/'dist/Marchan2_v0.21'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
+        command=[str(root/'dist/Marchan2_v0.22'/name)] if args.frozen else [sys.executable,str(root/(app+'.py'))]
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
@@ -114,11 +114,26 @@ with tempfile.TemporaryDirectory() as tmp:
         ana=next(u for u in admin.request('state')['users'] if u['name']=='ANA QA')
         admin.request('login',{'user_id':ana['id'],'pin':'4567'},status=400)
         tpv.login(ana['id'],'4567')
+        tpv.request('open',{'direct':True},status=400)
+        tpv.request('cash_open',{'opening':'100','request_id':'initial-cash-opening'})
+        admin.request('cash_open',{'opening':'100','request_id':'blocked-cash-opening'},status=403)
+        layout=admin.request('button_layout')
+        layout['layout']['others'].append(layout['layout']['right'].pop(0))
+        admin.request('button_layout_save',layout)
+        assert tpv.request('state')['button_layout']['layout']==layout['layout']
+        tpv.request('button_layout_save',layout,status=403)
+        layout=admin.request('button_layout');layout['calculator_enabled']=False
+        admin.request('button_layout_save',layout);assert tpv.request('state')['button_layout']['calculator_enabled'] is False
+        layout=admin.request('button_layout');layout['calculator_enabled']=True
+        admin.request('button_layout_save',layout)
         profile=admin.request('user_profile_save',{'name':'QA restringido','permissions':['ticket_open']})['id']
         admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff','profile_id':profile})
         assert tpv.request('state')['permissions']==['ticket_open']
         tpv.request('print_document',{'kind':'z_report'},status=403)
         tpv.request('pay',{'order_id':999,'expected_total':0},status=403)
+        tpv.request('line_discount',{'line_id':999},status=403)
+        tpv.request('cash',status=403)
+        tpv.request('cash_move',{'session_id':1,'kind':'income','amount':'1','reason':'Blocked','request_id':'blocked-cash-movement'},status=403)
         admin.request('user_profile_save',{'id':profile,'name':'QA restringido','permissions':['ticket_open','ticket_pay']})
         assert 'ticket_pay' in tpv.request('state')['permissions']
         admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff',
@@ -148,6 +163,15 @@ with tempfile.TemporaryDirectory() as tmp:
         assert state['company']['legal_name']=='EMPRESA QA'
         assert state['stock_warnings'][0]['name']=='HARINA QA'
         product=next(p for p in state['products'] if p['name']=='JHONNY NEGRO')
+        pid=admin.request('product',{'name':'PESO QA','category_id':1,'weighed':True,'formats':[{'name':'KILO','price':'20'}]})['product_id']
+        weighed=next(p for p in tpv.request('state')['products'] if p['id']==pid)
+        weight_order=tpv.request('open',{'direct':True})['order_id']
+        lid=tpv.request('add',{'order_id':weight_order,'format_id':weighed['formats'][0]['id'],'weight':'0.250'})['line_id']
+        tpv.request('line_discount',{'line_id':lid,'kind':'percent','value':'10','expected_revision':0,'expected_price':500,'expected_qty':1,'request_id':'api-discount-test'})
+        assert tpv.request('receipt/'+str(weight_order))['total']==450
+        tpv.request('line_weight',{'line_id':lid,'value':'0.500','expected_revision':1,'expected_price':450,'expected_qty':1,'request_id':'api-weight-test'})
+        assert tpv.request('receipt/'+str(weight_order))['total']==900
+        tpv.request('cancel_ticket',{'order_id':weight_order,'reason':'Prueba API de peso terminada'})
         oid=tpv.request('open',{'table_id':1})['order_id']
         for fmt in product['formats']:tpv.request('add',{'order_id':oid,'format_id':fmt['id']})
         order=tpv.request('state')['orders'][0]
@@ -161,6 +185,15 @@ with tempfile.TemporaryDirectory() as tmp:
         tpv.request('pay',{'order_id':oid,'expected_total':12900,'expected_due':6500,'payment':'cash','tendered':'70','request_id':'dual-part2'})
         receipt=tpv.request('receipt/'+str(oid));assert receipt['due']==0 and receipt['payments'][-1]['change_due']==500
         assert receipt['table_name']=='M2' and receipt['payments'][0]['user_id']==ana['id']
+        assert tpv.request('cash')['expected_cash']==16500
+        tpv.request('cash_move',{'session_id':1,'kind':'expense','amount':'5','reason':'Compra prueba','request_id':'cash-expense-test'})
+        tpv.request('cash_move',{'session_id':1,'kind':'income','amount':'2','reason':'Cambio prueba','request_id':'cash-income-test'})
+        cash=tpv.request('cash');assert cash['expected_cash']==16200
+        closing=tpv.request('cash_close',{'session_id':1,'expected_revision':cash['revision'],'counted_cash':'162','counted_card':'64','request_id':'cash-closing-test'})['report']
+        assert closing['cash_difference']==0 and closing['card_difference']==0
+        assert admin.request('cash?session_id=1')['kind']=='Z'
+        tpv.request('open',{'direct':True},status=400)
+        assert tpv.request('print_document',{'kind':'cash_z','session_id':1})['configured'] is False
         admin.request('user',{'id':ana['id'],'name':'ANA QA','pin':'5678','role':'staff'})
         tpv.request('state',status=401)
         tpv.login(ana['id'],'5678');tpv.request('logout',{});tpv.request('state',status=401)

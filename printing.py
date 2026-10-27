@@ -187,6 +187,7 @@ def _format_kitchen(order, items, route_name):
         for item in (item for item in items if item['course'] == course):
             lines.append(f"{item['qty']:>3} x  {item['name']}")
             if item['format']: lines.append(f"       {item['format']}")
+            if item.get('weight_label'):lines.append('       '+item['weight_label'])
             lines.extend(f"       + {extra['name']}" for extra in item['extras'])
             if item['note']: lines.append(f"       NOTA: {item['note']}")
         lines.append('-' * width)
@@ -256,6 +257,8 @@ def _format_receipt(order, company, template=None, categories=None):
     for item in items:
         lines.append(aligned(f"{item['qty']} x {item['name']}", amount(item['qty'] * item['price'])))
         detail = item['format']
+        if item.get('weight_label'):detail+=' · '+item['weight_label']+' x '+amount(item['reference_price'])+' / KG'
+        if item.get('discount_label'):detail+=' · '+item['discount_label']
         if item['extras']: detail += ' + ' + ', '.join(extra['name'] for extra in item['extras'])
         if show('show_unit_price', 0): detail += f" · {amount(item['price'])} / ud."
         if show('show_item_tax', 0): detail += f" · IVA {item['tax']}%"

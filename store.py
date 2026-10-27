@@ -115,6 +115,9 @@ class LegacyStore:
         with self.db() as c:
             c.execute('BEGIN IMMEDIATE')
             self.audit(c,actor,action,data.get('order_id'))
+            if action in ('open','add','quantity','send','close_empty'):
+                import cash_register
+                active_session=cash_register.require_open(c)
             if action=='open':
                 table=data.get('table_id')
                 if table is None and not data.get('direct'):
@@ -123,16 +126,21 @@ class LegacyStore:
                     if not c.execute('SELECT 1 FROM tables WHERE id=?',(table,)).fetchone():raise ValueError('La mesa no existe.')
                     existing=c.execute("SELECT id FROM orders WHERE table_id=? AND status='open'",(table,)).fetchone()
                     if existing:return {'order_id':existing['id']}
-                oid=c.execute('INSERT INTO orders(table_id,created,created_by) VALUES(?,?,?)',(table,datetime.now().isoformat(timespec='seconds'),actor)).lastrowid
+                oid=c.execute('INSERT INTO orders(table_id,created,created_by,cash_session_id) VALUES(?,?,?,?)',(table,datetime.now().isoformat(timespec='seconds'),actor,active_session['id'])).lastrowid
                 return {'order_id':oid}
             if action=='add':
                 from pos_profiles import active_options
                 auto_prepare=active_options(c)['auto_prepare']
                 self.require_open(c,data['order_id'])
-                row=c.execute('SELECT f.*,p.name product_name,p.tax,p.prep,p.course,p.addon_group FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1',(data['format_id'],)).fetchone()
+                row=c.execute('SELECT f.*,p.name product_name,p.tax,p.prep,p.course,p.addon_group,p.weighed FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1',(data['format_id'],)).fetchone()
                 if not row:raise ValueError('El formato ya no está disponible.')
                 qty=int(data.get('qty',1))
                 if qty<1 or qty>100:raise ValueError('Cantidad entre 1 y 100.')
+                grams=None
+                if row['weighed']:
+                    import line_pricing
+                    if qty!=1:raise ValueError('Cada porción pesada se añade por separado.')
+                    grams=line_pricing.weight(data.get('weight'))
                 ids=data.get('extras',[])
                 if len(ids)!=len(set(ids)) or len(ids)>(10 if 'BOTELLA' in row['name'] else 1):raise ValueError('Revisa la cantidad de añadidos.')
                 extras=[]
@@ -140,18 +148,18 @@ class LegacyStore:
                     e=c.execute('SELECT * FROM extras WHERE id=? AND group_name=?',(eid,row['addon_group'])).fetchone()
                     if not e or not row['addon_group']:raise ValueError('Ese añadido no pertenece al producto.')
                     extras.append(dict(e))
-                price=row['price']+sum(e['price'] for e in extras)
+                price=((row['price']*grams+500)//1000 if grams is not None else row['price'])+sum(e['price'] for e in extras)
                 note=str(data.get('note',''))[:300];extra_json=json.dumps(extras)
                 settings_row=c.execute("SELECT value FROM settings WHERE key='global_config'").fetchone()
                 preferences=json.loads(settings_row['value']).get('preferences',{}) if settings_row else {}
                 consolidate=preferences.get('consolidate_lines',True)
-                same=c.execute("SELECT id,qty FROM lines WHERE order_id=? AND format_id=? AND price=? AND tax=? AND extras=? AND note=? AND course=? AND kitchen='new' ORDER BY id DESC LIMIT 1",
-                               (data['order_id'],row['id'],price,row['tax'],extra_json,note,row['course'])).fetchone() if consolidate and not auto_prepare else None
+                same=c.execute("SELECT id,qty FROM lines WHERE order_id=? AND format_id=? AND price=? AND tax=? AND extras=? AND note=? AND course=? AND kitchen='new' AND weight_milli IS NULL AND discount_kind IS NULL ORDER BY id DESC LIMIT 1",
+                               (data['order_id'],row['id'],price,row['tax'],extra_json,note,row['course'])).fetchone() if consolidate and not auto_prepare and grams is None else None
                 if same and same['qty']+qty<=100:
                     c.execute('UPDATE lines SET qty=qty+? WHERE id=?',(qty,same['id']))
                     return {'line_id':same['id']}
-                lid=c.execute('INSERT INTO lines(order_id,product_id,format_id,name,format,price,qty,tax,extras,note,prep,course,kitchen) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                          (data['order_id'],row['product_id'],row['id'],row['product_name'],row['name'],price,qty,row['tax'],extra_json,note,row['prep'],row['course'],'pending' if auto_prepare else 'new')).lastrowid
+                lid=c.execute('INSERT INTO lines(order_id,product_id,format_id,name,format,price,qty,tax,extras,note,prep,course,kitchen,base_price,reference_price,is_weighed,weight_milli) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                          (data['order_id'],row['product_id'],row['id'],row['product_name'],row['name'],price,qty,row['tax'],extra_json,note,row['prep'],row['course'],'pending' if auto_prepare else 'new',price,row['price'],int(bool(row['weighed'])),grams)).lastrowid
                 if auto_prepare:
                     from printing import enqueue_kitchen
                     enqueue_kitchen(c,self,data['order_id'],[lid])
@@ -164,6 +172,7 @@ class LegacyStore:
                 if row['kitchen']!='new':raise ValueError('La línea ya se envió a preparación. Esta versión no permite anular comandas enviadas.')
                 qty=row['qty']+int(data['delta']) if 'delta' in data else int(data['qty'])
                 if qty<0 or qty>100:raise ValueError('Cantidad entre 0 y 100.')
+                if row['is_weighed'] and qty!=1:raise ValueError('Cambia el peso de esta porción o cancela la línea completa.')
                 if qty==0:c.execute('DELETE FROM lines WHERE id=?',(row['id'],))
                 else:c.execute('UPDATE lines SET qty=? WHERE id=?',(qty,row['id']))
             elif action=='send':
@@ -197,6 +206,9 @@ class LegacyStore:
                 if tax not in (0,4,10,21):raise ValueError('Selecciona un IVA válido.')
                 if prep not in ('BARRA','COCINA') or course not in ('PRIMERO','SEGUNDO','TERCEROS','BEBIDAS','POSTRES'):raise ValueError('Preparación no válida.')
                 if group and not c.execute('SELECT 1 FROM extras WHERE group_name=?',(group,)).fetchone():raise ValueError('El grupo de añadidos no existe.')
+                existing_weight=c.execute('SELECT weighed FROM products WHERE id=?',(data.get('id'),)).fetchone()
+                weighed=data.get('weighed',bool(existing_weight[0]) if existing_weight else False)
+                if type(weighed) is not bool:raise ValueError('Venta por peso no válida.')
                 formats=data.get('formats',[])
                 if not formats or len(formats)>20:raise ValueError('Añade entre 1 y 20 formatos de venta.')
                 formats=[(title(f['name']),money(f['price'])) for f in formats]
@@ -208,6 +220,7 @@ class LegacyStore:
                     c.execute('UPDATE products SET name=?,category_id=?,tax=?,prep=?,course=?,addon_group=? WHERE id=?',(name,cat,tax,prep,course,group,pid))
                     c.execute('UPDATE formats SET active=0 WHERE product_id=?',(pid,))
                 else:pid=c.execute('INSERT INTO products(name,category_id,tax,prep,course,addon_group) VALUES(?,?,?,?,?,?)',(name,cat,tax,prep,course,group)).lastrowid
+                c.execute('UPDATE products SET weighed=? WHERE id=?',(int(weighed),pid))
                 for fmt,price in formats:c.execute('INSERT INTO formats(product_id,name,price) VALUES(?,?,?)',(pid,fmt,price))
                 return {'product_id':pid}
             elif action=='category':

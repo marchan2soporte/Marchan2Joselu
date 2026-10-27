@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ class PosProfileTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.store = Store(Path(self.tmp.name) / 'test.db')
+        open_test_cash(self.store)
         ticket_templates.initialize(self.store)
 
     def test_profiles_persist_and_guard_active_deletion(self):

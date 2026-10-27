@@ -1,3 +1,4 @@
+from helpers import open_test_cash
 import tempfile
 from pathlib import Path
 import sqlite3
@@ -10,6 +11,7 @@ from store import Store,LegacyStore
 class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.path=Path(self.tmp.name)/'db.sqlite';self.s=Store(self.path)
+        open_test_cash(self.s)
         self.oid=self.s.mutate('open',{'table_id':1},1)['order_id']
         self.products=self.s.state()['products']
 
