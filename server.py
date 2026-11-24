@@ -26,6 +26,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import threading
 import webbrowser
+import desktop
 from store import Store
 
 TPV_ACTIONS={'open','add','quantity','send','march','course','note','move','pay','split_pay','ready','close_empty','cancel_line','cancel_ticket'}
@@ -37,7 +38,9 @@ def main(default_app='tpv'):
     parser.add_argument('--port',type=int,default=0)
     parser.add_argument('--data')
     parser.add_argument('--app',choices=['tpv','admin'],default=default_app)
-    parser.add_argument('--no-browser',action='store_true')
+    parser.add_argument('--no-browser',action='store_true',help='Solo servidor, sin ventana (pruebas).')
+    parser.add_argument('--browser',action='store_true',help='Abrir en el navegador en lugar de la ventana de escritorio.')
+    parser.add_argument('--fullscreen',action='store_true',help='Ventana a pantalla completa (modo quiosco del TPV).')
     args=parser.parse_args()
     folder=Path(args.data) if args.data else Path(os.environ.get('LOCALAPPDATA',str(Path.home())))/'Marchan2'
     folder.mkdir(parents=True,exist_ok=True)
@@ -81,12 +84,12 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
-                if path in ('/app.js','/receipt.js','/style.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
+                if path in ('/app.js','/receipt.js','/style.css','/theme.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.22'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.23'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -310,8 +313,14 @@ def main(default_app='tpv'):
     server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
     url=f'http://127.0.0.1:{server.server_port}'
     (folder/f'session-{args.app}.json').write_text(json.dumps({'url':url,'pid':os.getpid(),'app':args.app}),encoding='utf8')
-    if not args.no_browser:webbrowser.open(url)
     print('Marchan2 '+args.app+' · '+url,flush=True)
+    if not args.no_browser and not args.browser:
+        title='Marchan2 · '+('TPV' if args.app=='tpv' else 'Administración')
+        try:
+            if desktop.run(server,url,title,folder/'webview',fullscreen=args.fullscreen):
+                server.server_close();return
+        except Exception:pass
+    if not args.no_browser:webbrowser.open(url)
     try:server.serve_forever()
     except KeyboardInterrupt:pass
     finally:server.server_close()

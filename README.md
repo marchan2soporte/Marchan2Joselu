@@ -1,15 +1,23 @@
-# Marchan2 0.22 — JoseluIA
+# Marchan2 0.23 — JoseluIA
 
 Copia de desarrollo **Marchan2Joselu**, creada el 26/10/2026 a partir de [Marchan2Pedro](https://github.com/marchan2soporte/Marchan2Pedro) en la base 0.21. Conserva el historial original; los cambios de esta copia se publican en Marchan2Joselu. Consulta [BASE_PEDRO.md](BASE_PEDRO.md) para el resumen de la revisión.
 
 ## Abrir
 Extrae TODO el ZIP y conserva _internal junto a los dos ejecutables.
-Cierra las versiones anteriores. Abre Marchan2_Administracion.exe para administrar y Marchan2_TPV.exe para vender. Las interfaces se abren en el navegador y comparten los datos del equipo.
+Cierra las versiones anteriores. Abre Marchan2_Administracion.exe para administrar y Marchan2_TPV.exe para vender. Cada una se abre en su propia ventana de Windows (no en el navegador) y ambas comparten los datos del equipo. Al cerrar la ventana se detiene la aplicación.
 Primer acceso: ADMIN / PIN 1234. Si ya habías cambiado el PIN, conserva el tuyo.
 En Administración → Puntos de venta puedes configurar varios puestos y activar el que usa este TPV local. Instala primero la impresora de red en Windows para asignarla como cola de tickets o cocina. Si no hay cola asignada, «Ver cuenta» abre el diálogo de impresión de Windows. La IP guardada para el diagnóstico de red no es un destino de impresión. El puerto COM de balanza queda preparado para conectar un modelo con protocolo conocido.
 En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El papel de 80 mm admite inicialmente 48 columnas; puedes ajustar columnas, líneas de avance y corte por destino. Prueba primero «Sin corte» y después «Corte parcial» solo si el equipo dispone de cortador ESC/POS compatible. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. Los informes X/Z de jornada se abren desde Caja y jornada; usan el destino de impresión de Z del puesto. El antiguo resumen de prueba por fecha se conserva como compatibilidad interna, separado de los cierres nuevos.
-Windows 10/11 de 64 bits; no requiere instalar Python ni conexión a Internet.
+Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y en Windows 10 actualizado); no requiere instalar Python ni conexión a Internet. Si WebView2 no está disponible, la aplicación se abre en el navegador como antes.
+
+## Novedades 0.23 · aplicación de escritorio y nuevo diseño
+
+- TPV y Administración se abren como aplicación de escritorio en su propia ventana (Microsoft Edge WebView2, incluido en Windows 10/11), maximizada y sin barras de navegador. Cerrar la ventana o pulsar «Cerrar aplicación» detiene el proceso; ya no quedan servidores abiertos en segundo plano.
+- Pantalla completa (modo quiosco) con el botón de la barra lateral o F11. `--fullscreen` abre el TPV directamente a pantalla completa; `--browser` mantiene la apertura en el navegador.
+- Nuevo diseño visual: productos con color por categoría e inicial, categorías con punto de color en una fila deslizable, total más grande, acciones y botón Pagos destacados, mesas ocupadas en naranja con su importe y ventanas más claras.
+- Modo oscuro para todo el programa con el botón de la luna; la preferencia se recuerda en el equipo. La impresión siempre sale en claro.
+- La apertura de jornada propone 0 € y el teclado sustituye el valor al primer toque.
 
 ## Novedades 0.22 · venta y caja
 
@@ -73,15 +81,16 @@ La tarjeta se registra manualmente, no se conecta al datáfono. Preparar y March
 
 ## Datos
 Se mantienen en %LOCALAPPDATA%\Marchan2\marchan2.db. No se modifica Ágora. Una instalación nueva tiene carta y mesas de demostración. Las ventas simuladas de las capturas de prueba NO se incluyen en el ZIP.
-Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de datos. Cerrar una pestaña no cierra su proceso: usa el botón de encendido de la aplicación.
+Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de datos. Cerrar la ventana detiene la aplicación.
 
 ## Pendiente fiscal
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-86 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
-Fuentes: Python, SQLite y HTML/CSS/JS locales.
-Ejecutar: python tpv.py / python admin.py
+88 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+Fuentes: Python, SQLite, pywebview y HTML/CSS/JS locales. El diseño está en web/theme.css (variables de color, modo oscuro y pantalla de venta).
+Dependencias: python -m pip install -r requirements.txt
+Ejecutar: python tpv.py / python admin.py (añade --browser para usar el navegador o --fullscreen para pantalla completa)
 Pruebas: python -m unittest discover -s tests -v
 Integración: python tests/check_dual_apps.py
 Construir: python -m PyInstaller --noconfirm Marchan2_dual.spec

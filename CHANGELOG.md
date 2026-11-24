@@ -1,5 +1,12 @@
 # Cambios de Marchan2
 
+## 0.23
+- TPV y Administración se ejecutan como aplicación de escritorio en ventana propia (pywebview + WebView2), maximizada. Cerrar la ventana o «Cerrar aplicación» detiene el servidor local. Opciones `--browser` y `--fullscreen`; si no hay WebView2 se usa el navegador.
+- Pantalla completa con botón lateral o F11.
+- Nueva capa de diseño `web/theme.css`: variables de color, modo claro/oscuro conmutable, productos y categorías con color estable por categoría, mesas ocupadas destacadas, total y Pagos más visibles, cabecera compacta y sin pie en la pantalla de venta.
+- La apertura de jornada propone 0 € y el teclado reemplaza el valor al primer toque.
+- Dos pruebas nuevas de la ventana de escritorio (88 en total).
+
 ## 0.22
 - Calculadora habilitable por puesto, descuentos porcentuales o por unidad y porciones al peso en productos configurados por KG. Precios, pesos y cambios quedan registrados; los cobros usan céntimos enteros.
 - Cuenta de venta hasta abajo, calculadora segura, multiplicador de unidades y acciones a la derecha.

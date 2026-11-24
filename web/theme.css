@@ -1,0 +1,346 @@
+/* Marchan2 0.23 · Tema visual
+   Capa de diseño que se carga después de style.css. Define los colores como
+   variables, añade el modo oscuro y moderniza la pantalla de venta táctil. */
+
+:root,
+:root[data-theme="light"] {
+  --bg: #eef2f3;
+  --surface: #ffffff;
+  --surface-2: #f6f8f9;
+  --surface-3: #e9eef0;
+  --line: #dfe6e8;
+  --ink: #0f1f23;
+  --muted: #6b7c80;
+  --green: #0f7b5a;
+  --green-ink: #ffffff;
+  --mint: #b6ef5c;
+  --mint-ink: #15301f;
+  --rail: #0e1a1c;
+  --danger: #c0392b;
+  --danger-bg: #fdecea;
+  --white: var(--surface);
+  --shadow: 0 1px 2px #0f1f230d, 0 6px 20px #0f1f2310;
+  --shadow-lg: 0 20px 60px #0f1f2333;
+  --radius: 14px;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b1416;
+  --surface: #13201f;
+  --surface-2: #182826;
+  --surface-3: #1f3230;
+  --line: #26393a;
+  --ink: #e6efee;
+  --muted: #8ea3a2;
+  --green: #22a77a;
+  --green-ink: #04140e;
+  --mint: #b6ef5c;
+  --mint-ink: #10230f;
+  --rail: #070e0f;
+  --danger: #ff7a6b;
+  --danger-bg: #3a1c19;
+  --shadow: 0 1px 2px #0006, 0 8px 24px #0005;
+  --shadow-lg: 0 24px 70px #000a;
+  color-scheme: dark;
+}
+
+:root { font-family: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; user-select: none; }
+input, textarea, [contenteditable] { user-select: text; }
+h1 span { color: var(--green); }
+
+/* ---------- Botones y controles ---------- */
+.button { border-radius: 12px; font-weight: 650; min-height: 44px; transition: background .15s, transform .08s, box-shadow .15s; }
+.primary { background: var(--green); color: var(--green-ink); box-shadow: 0 4px 14px color-mix(in srgb, var(--green) 30%, transparent); }
+.lime { background: var(--mint); color: var(--mint-ink); }
+.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.dark { background: var(--ink); color: var(--bg); }
+.danger { color: var(--danger); background: var(--danger-bg); }
+button:active:not(:disabled) { transform: scale(.97); }
+button:hover { filter: none; }
+input, select, textarea { background: var(--surface); color: var(--ink); border-color: var(--line); border-radius: 12px; min-height: 44px; }
+input:focus, select:focus, textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 20%, transparent); }
+label { color: var(--muted); letter-spacing: .3px; }
+.pill { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; min-height: 40px; padding: 9px 16px; font-weight: 650; }
+.pill.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.panel { background: var(--surface); border-color: var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.muted, small.muted { color: var(--muted); }
+
+/* ---------- Barra lateral ---------- */
+.rail { background: var(--rail); width: 84px; padding: 18px 10px; box-shadow: 1px 0 0 #ffffff08; }
+.brand img { width: 52px; height: 52px; border-radius: 14px; }
+.rail nav { margin-top: 34px; gap: 8px; }
+.nav { color: #8ba3a3; border-radius: 14px; padding: 13px 4px; font-size: 11px; position: relative; }
+.nav svg { width: 24px; height: 24px; }
+.nav.active { color: var(--mint); background: #ffffff10; }
+.nav.active::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--mint); }
+.rail-bottom { gap: 10px; }
+.rail-bottom button { margin-top: 0; }
+.rail-bottom #exit { margin-top: 8px; width: 48px; height: 48px; border-radius: 14px; font-size: 22px; color: #e98a80; background: #ffffff08; }
+.rail-tool { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; color: #8ba3a3; background: #ffffff06; }
+.rail-tool svg { width: 22px; height: 22px; }
+.rail-tool:hover, .rail-bottom #exit:hover { background: #ffffff14; color: #fff; }
+.shell { margin-left: 84px; }
+
+/* ---------- Cabecera ---------- */
+header { padding: 20px 30px 16px; }
+header h1 { font-weight: 700; letter-spacing: -.8px; }
+.eyebrow { color: var(--muted); }
+.demo { background: color-mix(in srgb, #e0a43a 18%, var(--surface)); color: #a26a12; border-radius: 999px; padding: 7px 12px; }
+.clock { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.user-switch { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; min-height: 44px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-weight: 700; color: var(--ink); }
+.user-switch svg { width: 20px; height: 20px; }
+.user-switch small { color: var(--muted); font-size: 10px; letter-spacing: 1px; }
+footer { color: var(--muted); }
+
+/* ---------- Acceso ---------- */
+.login-mode .shell { background: radial-gradient(1200px 600px at 80% -10%, color-mix(in srgb, var(--green) 16%, transparent), transparent 60%); }
+.login-user { background: var(--surface); border-color: var(--line); border-radius: 20px; box-shadow: var(--shadow); transition: transform .12s, border-color .12s; }
+.login-user:hover { transform: translateY(-2px); }
+.login-user.chosen { border-color: var(--green); background: color-mix(in srgb, var(--green) 10%, var(--surface)); }
+.login-user > span, .user-initials { background: var(--green); color: var(--green-ink); }
+.pin-panel input { font-size: 30px; letter-spacing: 14px; min-height: 60px; }
+.number-pad { gap: 10px; }
+.number-pad button { background: var(--surface-2); border-color: var(--line); color: var(--ink); min-height: 60px; border-radius: 14px; font-size: 24px; font-weight: 600; }
+.number-pad button:active { background: var(--mint); color: var(--mint-ink); }
+
+/* ---------- Mesas ---------- */
+.hero { background: linear-gradient(135deg, #0f2a2a, #123d33 60%, #18513c); border-radius: 22px; box-shadow: var(--shadow); }
+.hero .hero-number { color: var(--mint); font-weight: 600; }
+.table-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); transition: transform .12s, box-shadow .12s; color: var(--ink); }
+.table-card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px #0f1f231c; }
+.table-card .table-shape { border-color: var(--line); background: var(--surface-2); color: var(--ink); }
+.table-shape:before, .table-shape:after { background: var(--line); }
+.table-card.occupied { background: linear-gradient(160deg, color-mix(in srgb, #e0803a 18%, var(--surface)), var(--surface) 70%); border-color: color-mix(in srgb, #e0803a 55%, var(--line)); }
+.table-card.occupied .table-shape { background: #e0803a; border-color: #e0803a; color: #fff; }
+.table-card.occupied .table-shape:before, .table-card.occupied .table-shape:after { background: #e0803a; }
+.table-card.occupied .table-bottom strong { color: #c4631d; font-size: 17px; }
+.table-card:not(.occupied) .table-bottom span { color: var(--green); font-weight: 700; }
+
+/* ---------- Venta: diseño general ---------- */
+.tpv-mode.selling header { padding: 8px 20px; }
+.tpv-mode.selling header h1 { font-size: 20px; margin-top: 2px; }
+.tpv-mode.selling footer { display: none; }
+.tpv-mode.selling main { padding: 6px 14px 12px; }
+.sale-status { color: var(--muted); }
+
+/* Cuenta */
+.service-ticket { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
+.ticket-head { border-bottom: 1px solid var(--line); }
+.ticket-head h2 { font-weight: 750; }
+.badge { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); border-radius: 999px; padding: 4px 10px; font-size: 10px; letter-spacing: 1px; }
+.service-line { border: 2px solid transparent; border-bottom: 1px solid var(--line); border-radius: 12px; color: var(--ink); transition: background .12s; }
+.service-line:hover { background: var(--surface-2); }
+.service-line.selected { border: 2px solid var(--green); background: color-mix(in srgb, var(--green) 9%, var(--surface)); }
+.line-qty { background: var(--surface-3); color: var(--ink); border-radius: 10px; min-width: 34px; width: auto; padding: 0 6px; }
+.service-line.selected .line-qty { background: var(--green); color: var(--green-ink); }
+.line-info small { color: var(--muted); }
+.line-toolbar { border-top: 1px solid var(--line); }
+.ticket-bottom, .service-ticket .ticket-bottom { background: var(--surface-2); border-top: 1px solid var(--line); }
+.total span { font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-size: 12px; }
+.total strong, .service-ticket .total strong, .selling .total strong { font-size: 34px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* Calculadora */
+.ticket-calculator { background: var(--surface-2); border-top: 1px solid var(--line); }
+.calc-display > span { color: var(--muted); }
+.calc-display output { color: var(--ink); font-variant-numeric: tabular-nums; }
+.calc-keys button, .calc-tools button,
+.selling .calc-keys button:nth-child(4n), .selling .calc-keys button:nth-child(5n-1) { background: var(--surface); border: 1px solid var(--line); color: var(--ink); border-radius: 10px; }
+.selling .calc-keys button:nth-child(6n-2), .selling .calc-keys .calc-quantity { background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green); border-color: color-mix(in srgb, var(--green) 30%, var(--line)); }
+.selling .calc-keys .calc-quantity { font-size: 10px; line-height: 1.1; white-space: normal; }
+.calc-keys button:active { background: var(--mint) !important; color: var(--mint-ink) !important; }
+
+/* Catálogo */
+.search input { background: var(--surface); min-height: 48px; border-radius: 14px; font-size: 15px; padding-left: 42px; }
+.search svg { top: 15px; left: 14px; width: 18px; color: var(--muted); }
+.family-tabs .pill { background: var(--surface-3); color: var(--ink); border: 0; min-height: 46px; letter-spacing: .5px; }
+.family-tabs .pill.active { background: var(--ink); color: var(--bg); }
+.category-tabs .pill { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; }
+.category-tabs .pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tile, var(--muted)); flex: none; }
+.category-tabs .pill.active { background: var(--tile, var(--ink)); border-color: var(--tile, var(--ink)); color: #fff; }
+.category-tabs .pill.active .dot { background: #fff; }
+
+.product, .service-catalog .product, .selling .service-catalog .product {
+  --tile: var(--green);
+  background: color-mix(in srgb, var(--tile) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--tile) 22%, var(--line));
+  border-top: 5px solid var(--tile);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  transition: transform .1s, box-shadow .15s, background .15s;
+}
+.product:hover { transform: translateY(-2px); border-color: var(--tile); box-shadow: 0 10px 24px color-mix(in srgb, var(--tile) 22%, transparent); }
+.product:active:not(:disabled) { transform: scale(.96); background: color-mix(in srgb, var(--tile) 22%, var(--surface)); }
+.product .product-symbol { background: var(--tile); color: #fff; font-weight: 800; font-size: 16px; border-radius: 11px; width: 36px; height: 36px; }
+.product[data-parent="BEBIDAS"] .product-symbol { background: var(--tile); color: #fff; }
+.product strong { font-weight: 750; line-height: 1.25; }
+.product .price { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+.product .price small, .formats-count { color: var(--muted); }
+
+/* Acciones de la derecha */
+.action-tile { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; color: var(--ink); box-shadow: var(--shadow); transition: transform .08s, background .12s; }
+.action-tile > b { color: var(--green); }
+.action-tile > small { color: var(--muted); }
+.action-tile:hover:not(:disabled) { background: var(--surface-2); }
+.action-tile:disabled { opacity: .45; box-shadow: none; }
+.action-tile.pay-action { background: var(--mint); border-color: color-mix(in srgb, var(--mint) 70%, #000); color: var(--mint-ink); box-shadow: 0 8px 22px color-mix(in srgb, var(--mint) 45%, transparent); }
+.action-tile.pay-action > b, .action-tile.pay-action > small { color: var(--mint-ink); }
+.action-tile.pay-action:disabled { box-shadow: none; }
+.action-tile.pay-action > span { font-size: 20px; font-weight: 800; }
+
+/* ---------- Ventanas, avisos ---------- */
+dialog { background: var(--surface); color: var(--ink); border-radius: 24px; box-shadow: var(--shadow-lg); border: 1px solid var(--line); }
+dialog::backdrop { background: #061012a6; backdrop-filter: blur(6px); }
+.modal-title .close { width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); color: var(--muted); }
+.modal-title h2 { font-weight: 750; }
+#toast { background: var(--ink); color: var(--bg); border-radius: 14px; font-size: 14px; font-weight: 600; padding: 14px 22px; }
+#toast.error { background: var(--danger); color: #fff; }
+.empty { color: var(--muted); }
+
+/* ---------- Scroll fino ---------- */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- Pantallas pequeñas ---------- */
+@media (max-width: 900px) {
+  .rail { width: 70px; }
+  .shell { margin-left: 70px; }
+  .rail-tool, .rail-bottom #exit { width: 42px; height: 42px; }
+}
+
+/* ---------- Modo oscuro: superficies que style.css fija en claro (generado) ---------- */
+:root[data-theme="dark"] .action-tile,
+:root[data-theme="dark"] .admin-table th,
+:root[data-theme="dark"] .admin-table tr:hover td,
+:root[data-theme="dark"] .avatar,
+:root[data-theme="dark"] .badge,
+:root[data-theme="dark"] .button-order-card,
+:root[data-theme="dark"] .button-order-card button,
+:root[data-theme="dark"] .calc-keys button,
+:root[data-theme="dark"] .calc-keys button:nth-child(4n),
+:root[data-theme="dark"] .calc-tools button,
+:root[data-theme="dark"] .cash-difference,
+:root[data-theme="dark"] .cash-summary>div,
+:root[data-theme="dark"] .center-tag,
+:root[data-theme="dark"] .company-actions,
+:root[data-theme="dark"] .company-heading .button,
+:root[data-theme="dark"] .danger,
+:root[data-theme="dark"] .demo,
+:root[data-theme="dark"] .directory-tile,
+:root[data-theme="dark"] .extra-tile.selected,
+:root[data-theme="dark"] .family-tabs .pill,
+:root[data-theme="dark"] .format-option.selected,
+:root[data-theme="dark"] .global-form-actions,
+:root[data-theme="dark"] .global-hero .button,
+:root[data-theme="dark"] .insight-hero .button.secondary,
+:root[data-theme="dark"] .insight-hero .button.secondary:hover,
+:root[data-theme="dark"] .insight-panel,
+:root[data-theme="dark"] .kitchen-top,
+:root[data-theme="dark"] .line-qty,
+:root[data-theme="dark"] .login-user,
+:root[data-theme="dark"] .login-user.chosen,
+:root[data-theme="dark"] .nav.active,
+:root[data-theme="dark"] .nav:hover,
+:root[data-theme="dark"] .number-pad button,
+:root[data-theme="dark"] .occupied .table-shape,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .payment-note,
+:root[data-theme="dark"] .period-metric,
+:root[data-theme="dark"] .period-metric.chosen,
+:root[data-theme="dark"] .permission-item:hover,
+:root[data-theme="dark"] .pill,
+:root[data-theme="dark"] .pos-profile-form section,
+:root[data-theme="dark"] .product,
+:root[data-theme="dark"] .product-symbol,
+:root[data-theme="dark"] .product[data-parent="BEBIDAS"] .product-symbol,
+:root[data-theme="dark"] .rank-track,
+:root[data-theme="dark"] .report-controls input,
+:root[data-theme="dark"] .report-controls select,
+:root[data-theme="dark"] .report-note,
+:root[data-theme="dark"] .search input,
+:root[data-theme="dark"] .secondary,
+:root[data-theme="dark"] .selling .calc-keys .calc-quantity,
+:root[data-theme="dark"] .selling .calc-keys button:nth-child(4n),
+:root[data-theme="dark"] .selling .calc-keys button:nth-child(5n-1),
+:root[data-theme="dark"] .selling .calc-keys button:nth-child(6n-2),
+:root[data-theme="dark"] .series-hero .button,
+:root[data-theme="dark"] .service-line.selected,
+:root[data-theme="dark"] .split-choice,
+:root[data-theme="dark"] .status-pill.planned,
+:root[data-theme="dark"] .status-pill.ready,
+:root[data-theme="dark"] .step,
+:root[data-theme="dark"] .studio-default,
+:root[data-theme="dark"] .studio-preview,
+:root[data-theme="dark"] .studio-step,
+:root[data-theme="dark"] .studio-toggle,
+:root[data-theme="dark"] .studio-upload,
+:root[data-theme="dark"] .studio-upload input,
+:root[data-theme="dark"] .table-card,
+:root[data-theme="dark"] .table-card.occupied,
+:root[data-theme="dark"] .table-shape:after,
+:root[data-theme="dark"] .table-shape:before,
+:root[data-theme="dark"] .template-paper,
+:root[data-theme="dark"] .template-save,
+:root[data-theme="dark"] .templates-hero .button,
+:root[data-theme="dark"] .ticket-bottom,
+:root[data-theme="dark"] .ticket-calculator,
+:root[data-theme="dark"] .user-switch,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea { background-color: var(--surface-2); }
+:root[data-theme="dark"] .button-card-icon,
+:root[data-theme="dark"] .calc-keys button:nth-child(4n),
+:root[data-theme="dark"] .company-heading .button,
+:root[data-theme="dark"] .company-section legend,
+:root[data-theme="dark"] .danger-action>b,
+:root[data-theme="dark"] .danger-action>span,
+:root[data-theme="dark"] .directory-tile,
+:root[data-theme="dark"] .global-hero .button,
+:root[data-theme="dark"] .inline-error,
+:root[data-theme="dark"] .insight-hero .button.secondary,
+:root[data-theme="dark"] .lime,
+:root[data-theme="dark"] .period-metric,
+:root[data-theme="dark"] .report-controls input,
+:root[data-theme="dark"] .report-controls select,
+:root[data-theme="dark"] .selling .calc-keys button:nth-child(5n-1),
+:root[data-theme="dark"] .selling .calc-keys button:nth-child(6n-2),
+:root[data-theme="dark"] .series-hero .button,
+:root[data-theme="dark"] .status-pill.ready,
+:root[data-theme="dark"] .studio-toggle,
+:root[data-theme="dark"] .template-paper,
+:root[data-theme="dark"] .templates-hero .button { color: var(--ink); }
+
+/* Los componentes rediseñados arriba mantienen su color propio en modo oscuro. */
+:root[data-theme="dark"] .panel, :root[data-theme="dark"] .service-ticket, :root[data-theme="dark"] .table-card:not(.occupied),
+:root[data-theme="dark"] .action-tile:not(.pay-action), :root[data-theme="dark"] .secondary, :root[data-theme="dark"] .pill:not(.active),
+:root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea, :root[data-theme="dark"] dialog,
+:root[data-theme="dark"] .login-user:not(.chosen), :root[data-theme="dark"] .calc-keys button, :root[data-theme="dark"] .calc-tools button { background-color: var(--surface); }
+:root[data-theme="dark"] .product { background-color: color-mix(in srgb, var(--tile) 14%, var(--surface)); }
+:root[data-theme="dark"] .action-tile.pay-action { background-color: var(--mint); color: var(--mint-ink); }
+:root[data-theme="dark"] .pill.active { color: var(--bg); }
+:root[data-theme="dark"] .category-tabs .pill.active { background-color: var(--tile, var(--ink)); color: #fff; }
+:root[data-theme="dark"] .family-tabs .pill:not(.active) { background-color: var(--surface-3); }
+:root[data-theme="dark"] .primary { color: var(--green-ink); }
+:root[data-theme="dark"] .hero { color: #fff; }
+
+/* Impresión siempre en claro */
+@media print {
+  :root, :root[data-theme="dark"] { --bg:#fff; --surface:#fff; --surface-2:#fff; --surface-3:#fff; --line:#ddd; --ink:#000; --muted:#444; color-scheme: light; }
+  dialog { border: 0; box-shadow: none; border-radius: 0; background: #fff; color: #000; }
+}
+
+/* Categorías en una fila deslizable para no robar altura al catálogo */
+.selling .category-tabs, .selling .family-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+.selling .category-tabs .pill, .selling .family-tabs .pill { flex: none; }
+.selling .calc-tools button, .selling .calc-keys button { overflow: hidden; }
+.selling .category-tabs, .selling .family-tabs { scrollbar-width: none; }
+:root .category-tabs .pill.active:not([style]), :root[data-theme] .category-tabs .pill.active:not([style]),
+:root[data-theme] .family-tabs .pill.active, :root[data-theme] .pills .pill.active:not([style]) { background-color: var(--ink); color: var(--bg); border-color: var(--ink); }
+/* Botón oscuro (p. ej. Tarjeta): siempre contrastado */
+.dark { background: #1b3236; color: #fff; }
+:root[data-theme="dark"] .dark { background: #2b4a50; color: #fff; }
+.payment-choice { border-radius: 18px; transition: transform .08s; }
+.payment-choice:active { transform: scale(.97); }
