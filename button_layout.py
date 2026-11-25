@@ -13,7 +13,11 @@ CATALOG=[
  ('close_shift','Cerrar jornada','Z','cash_close'),('cash_history','Cierres anteriores','◷','cash_view'),
  ('last_receipt','Último ticket','↶','ticket_print'),('open_tickets','Tickets abiertos','☷','ticket_open'),
  ('note','Añadir nota','✎','ticket_note'),('cancel_line','Cancelar línea','⌫','ticket_cancel'),
- ('switch_user','Cambiar usuario','↪','')]
+ ('switch_user','Cambiar usuario','↪',''),
+ ('guests','Comensales','👥','ticket_open'),('customer','Cliente','👤','ticket_open'),
+ ('service','Tipo de servicio','🛵','ticket_open'),('invite','Invitar','♡','ticket_invite'),
+ ('ticket_discount','Dto. ticket','%','ticket_discount'),('merge','Unir cuentas','⊕','ticket_merge'),
+ ('clock','Fichar','⏱','')]
 DEFAULT={'right':['prepare','march','course','receipt','payments','others'],
          'others':[r[0] for r in CATALOG if r[0] not in ('prepare','march','course','receipt','payments','others')]}
 
@@ -31,7 +35,10 @@ def read(store,profile_id=None):
         if profile_id is None:profile_id=c.execute('SELECT id FROM pos_profiles WHERE active=1').fetchone()[0]
         if not c.execute('SELECT 1 FROM pos_profiles WHERE id=?',(profile_id,)).fetchone():raise ValueError('Punto de venta inexistente.')
         row=c.execute('SELECT * FROM pos_button_layouts WHERE profile_id=?',(profile_id,)).fetchone()
-        return dict(profile_id=profile_id,layout=json.loads(row['layout']) if row else {k:list(v) for k,v in DEFAULT.items()},revision=row['revision'] if row else 0,calculator_enabled=bool(row['calculator_enabled']) if row else True,catalog=[dict(id=i,label=l,icon=g,permission=p) for i,l,g,p in CATALOG])
+        layout=json.loads(row['layout']) if row else {k:list(v) for k,v in DEFAULT.items()}
+        placed=set(layout['right'])|set(layout['others'])
+        layout['others']+= [r[0] for r in CATALOG if r[0] not in placed]
+        return dict(profile_id=profile_id,layout=layout,revision=row['revision'] if row else 0,calculator_enabled=bool(row['calculator_enabled']) if row else True,catalog=[dict(id=i,label=l,icon=g,permission=p) for i,l,g,p in CATALOG])
 
 def save(store,data,actor):
     calculator=data.get('calculator_enabled',True)

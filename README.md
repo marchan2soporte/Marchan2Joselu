@@ -1,4 +1,4 @@
-# Marchan2 0.23 — JoseluIA
+# Marchan2 0.24 — JoseluIA
 
 Copia de desarrollo **Marchan2Joselu**, creada el 26/10/2026 a partir de [Marchan2Pedro](https://github.com/marchan2soporte/Marchan2Pedro) en la base 0.21. Conserva el historial original; los cambios de esta copia se publican en Marchan2Joselu. Consulta [BASE_PEDRO.md](BASE_PEDRO.md) para el resumen de la revisión.
 
@@ -10,6 +10,20 @@ En Administración → Puntos de venta puedes configurar varios puestos y activa
 En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El papel de 80 mm admite inicialmente 48 columnas; puedes ajustar columnas, líneas de avance y corte por destino. Prueba primero «Sin corte» y después «Corte parcial» solo si el equipo dispone de cortador ESC/POS compatible. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. Los informes X/Z de jornada se abren desde Caja y jornada; usan el destino de impresión de Z del puesto. El antiguo resumen de prueba por fecha se conserva como compatibilidad interna, separado de los cierres nuevos.
 Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y en Windows 10 actualizado); no requiere instalar Python ni conexión a Internet. Si WebView2 no está disponible, la aplicación se abre en el navegador como antes.
+
+## Novedades 0.24 · funciones de hostelería
+
+Basadas en el estudio de Ágora, Numier y Qamarero ([ESTUDIO_COMPETENCIA.md](ESTUDIO_COMPETENCIA.md)).
+- **Plano de sala**: dibújalo en Administración → Plano de mesas (arrastrar, forma y plazas). En el TPV, Mesas muestra Plano o Lista con comensales, tiempo de ocupación y cliente.
+- **Comensales**: se piden al abrir una mesa y se editan desde la cuenta.
+- **Clientes**: nueva vista en el TPV y en Administración, con contacto, NIF, dirección, notas, alergias, VIP, visitas y gasto. Asigna el cliente a la cuenta; si tiene alergias, la cuenta avisa de los productos que las contienen.
+- **Alérgenos y favoritos**: Administración → Alérgenos marca los 14 alérgenos de cada producto y los favoritos. El TPV muestra las siglas en cada tecla y añade las pestañas ★ Favoritos y 🔥 Más vendidos.
+- **Tipo de servicio**: mesa, barra, para llevar o domicilio (con dirección). Botones rápidos Para llevar y Domicilio en Mesas.
+- **Invitar** una línea o toda la cuenta con motivo, **Dto. ticket** en porcentaje sobre toda la cuenta y **Unir cuentas**. Están en Otros y se pueden colocar a la derecha desde Administración → Botones.
+- **Fichaje**: el botón de la cabecera registra la entrada y la salida del usuario.
+- Nuevos permisos: invitar, unir cuentas y gestionar clientes (Camarero no los recibe por defecto).
+- 8 informes nuevos: Invitaciones, Alérgenos por producto, Comensales por centro de venta, Cancelaciones por usuario, Descuentos por usuario y tipo, Ventas a cliente, Productos vendidos a cada cliente y Control horario.
+- **Corrección de la app de escritorio**: al extraer el ZIP descargado, Windows marcaba los archivos como «descargados de Internet» y bloqueaba la ventana, así que se abría el navegador. Ahora la aplicación quita esa marca de sus propios archivos al arrancar. Si la ventana no puede abrirse, el motivo queda en `desktop.log`, en la carpeta de datos.
 
 ## Novedades 0.23 · aplicación de escritorio y nuevo diseño
 
@@ -58,7 +72,7 @@ La venta se reconoce al cerrar la cuenta. Un pago parcial se reconoce en cobros 
 No se calcula número de comensales ni margen comercial porque todavía no se registran los datos necesarios.
 
 ## Informes
-Biblioteca por áreas con buscador. 30 informes disponibles con fechas y exportación CSV compatible con Excel. Las consultas de ventas recorren todo el histórico del intervalo, no solo las últimas 100 cuentas.
+Biblioteca por áreas con buscador. 38 informes disponibles con fechas y exportación CSV compatible con Excel. Las consultas de ventas recorren todo el histórico del intervalo, no solo las últimas 100 cuentas.
 ALCANCE.md detalla el estado de cada informe. Los módulos pendientes no devuelven resultados ficticios.
 Las agrupaciones por familia/categoría utilizan la clasificación actual de la carta. Los informes de usuario atribuyen las ventas a quien abrió la cuenta; los cobros conservan quien los registró.
 El resumen de impuestos es orientativo, con IVA incluido y redondeo por tipo. No es una declaración ni un documento fiscal.
@@ -87,7 +101,7 @@ Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de dato
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-88 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+91 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
 Fuentes: Python, SQLite, pywebview y HTML/CSS/JS locales. El diseño está en web/theme.css (variables de color, modo oscuro y pantalla de venta).
 Dependencias: python -m pip install -r requirements.txt
 Ejecutar: python tpv.py / python admin.py (añade --browser para usar el navegador o --fullscreen para pantalla completa)

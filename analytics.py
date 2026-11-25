@@ -8,7 +8,7 @@ REPORT_GROUPS={
 'Locales':['Ventas por local','Comensales por local y periodo de servicio','Operaciones por local y periodo de servicio','Formatos de venta por local','Productos por local'],
 'Evolución':['Evolución de ventas','Comparativa interanual','Resumen de impuestos','Invitaciones','Reservas','Documento 347','Estado de TicketBAI'],
 'Carta y rentabilidad':['Grupos mayores','Familias y productos','Categorías y productos','Productos en menús','Márgenes por familias','Márgenes por categorías','Promociones y productos','Alérgenos por producto','Histórico de ventas','Rentabilidad de la carta','Top 50 formatos','Top 50 productos','Ventas diarias'],
-'Equipo':['Rendimiento de usuarios','Usuarios por periodo de servicio','Productos por usuario','Descuentos por usuario y producto','Descuentos por usuario y tipo','Cancelaciones por usuario'],
+'Equipo':['Control horario','Rendimiento de usuarios','Usuarios por periodo de servicio','Productos por usuario','Descuentos por usuario y producto','Descuentos por usuario y tipo','Cancelaciones por usuario'],
 'Espacios':['Centros de venta','Ventas por ubicación','Productos por centro de venta','Comensales por centro de venta','Operaciones por centro de venta'],
 'Cobros y caja':['Formas de pago','Tarifas','Movimientos de caja','Cobros pendientes','Propinas por formas de pago'],
 'Servicios':['Productos por periodo de servicio','Centros de venta por periodo de servicio','Comensales por periodo de servicio','Operaciones por periodo de servicio'],
@@ -20,6 +20,8 @@ LIVE={'Análisis de ventas','Evolución de ventas','Comparativa interanual','Res
 INVENTORY_REPORTS={'Análisis de compras','Análisis de stocks','Entradas detalladas por proveedor','Compras por proveedor','Precios de compra','Stock por producto','Histórico de compras','Movimientos por producto','Valoración de mermas'}
 LIVE.update(INVENTORY_REPORTS)
 LIVE.update({'Movimientos de caja','Diario de cierres de caja'})
+from hospitality import REPORTS as HOSPITALITY_REPORTS
+LIVE.update(HOSPITALITY_REPORTS)
 DEPENDENCIES={'Visión del negocio':'compras, existencias y costes de adquisición','Locales':'locales y periodos de servicio vinculados a cada operación','Evolución':'reservas, invitaciones o integración fiscal, según el informe','Carta y rentabilidad':'costes históricos, menús, promociones o alérgenos vinculados a los productos','Equipo':'descuentos, cancelaciones y periodos de servicio','Espacios':'número de comensales registrado en cada cuenta','Cobros y caja':'tarifas, movimientos de caja y propinas','Servicios':'periodos de servicio vinculados a cada operación','Clientes':'clientes vinculados a ventas y documentos','Almacén':'recepciones, compras y movimientos de existencias','Cocina':'marcas de tiempo de envío y finalización de cada línea','Diarios':'documentos y cierres de caja'}
 
 def report_catalog():
@@ -52,7 +54,9 @@ def dashboard(store,today=None):
   pending=c.execute("SELECT COALESCE(SUM((SELECT COALESCE(SUM(qty*price),0) FROM lines WHERE order_id=o.id)-(SELECT COALESCE(SUM(amount),0) FROM payments WHERE order_id=o.id)),0) FROM orders o WHERE status='open'").fetchone()[0]
  import inventory
  stock=dict(current=inventory.valuation(store,(today+timedelta(days=1)).isoformat()),month=inventory.valuation(store,today.replace(day=1).isoformat()),year=inventory.valuation(store,today.replace(month=1,day=1).isoformat()))
- return dict(cards=cards,tables=tables,occupied=occupied,pending=pending,stock=stock,guests=None,generated=datetime.now().isoformat(timespec='seconds'))
+ with store.db() as c:
+  guests=c.execute("SELECT COALESCE(SUM(guests),0) FROM orders WHERE (status='paid' AND substr(paid_at,1,10)=?) OR status='open'",(today.isoformat(),)).fetchone()[0]
+ return dict(cards=cards,tables=tables,occupied=occupied,pending=pending,stock=stock,guests=guests,generated=datetime.now().isoformat(timespec='seconds'))
 
 def report(store,name,start,end):
  entry=next((r for r in report_catalog() if r['id']==name),None)
@@ -61,6 +65,9 @@ def report(store,name,start,end):
  if name in INVENTORY_REPORTS:
   import inventory
   return inventory.report(store,name,start,end)
+ if name in HOSPITALITY_REPORTS:
+  import hospitality
+  return dict(**entry,**hospitality.report(store,name,start,end),start=start,end=end)
  if name in ('Movimientos de caja','Diario de cierres de caja'):
   import cash_register
   return cash_register.analytics_report(store,name,start,end)

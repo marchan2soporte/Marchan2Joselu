@@ -29,9 +29,11 @@ CATALOG.update(NEW_CASH_RIGHTS)
 PREVIOUS_PRICING_ALL=set(CATALOG)
 NEW_PRICING_RIGHTS={'ticket_discount':'Ticket: Aplicar o quitar descuentos de línea','ticket_weight':'Ticket: Cambiar peso de una porción'}
 CATALOG.update(NEW_PRICING_RIGHTS)
+NEW_HOSPITALITY_RIGHTS={'ticket_invite':'Ticket: Invitar productos o la cuenta','ticket_merge':'Ticket: Unir cuentas','customer_manage':'Clientes: Crear y editar fichas'}
+CATALOG.update(NEW_HOSPITALITY_RIGHTS)
 ALL = list(CATALOG)
 WAITER = [key for key in ALL if key not in
-          ('ticket_cancel_prepared', 'ticket_pay', 'z_view', 'z_print', 'print_retry',*NEW_CASH_RIGHTS,*NEW_PRICING_RIGHTS)]
+          ('ticket_cancel_prepared', 'ticket_pay', 'z_view', 'z_print', 'print_retry',*NEW_CASH_RIGHTS,*NEW_PRICING_RIGHTS,'ticket_invite','ticket_merge')]
 ACTION = {'open': 'ticket_open', 'close_empty': 'ticket_open', 'add': 'ticket_add',
           'quantity': 'ticket_quantity', 'note': 'ticket_note', 'course': 'ticket_course',
           'cancel_line': 'ticket_cancel', 'send': 'ticket_send', 'march': 'ticket_march',

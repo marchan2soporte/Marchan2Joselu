@@ -16,6 +16,7 @@ import permissions
 import cash_register
 import button_layout
 import line_pricing
+import hospitality
 import json
 import os
 from pathlib import Path
@@ -84,12 +85,12 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
-                if path in ('/app.js','/receipt.js','/style.css','/theme.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js'):
+                if path in ('/app.js','/receipt.js','/style.css','/theme.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js',f'/{args.app}-plus.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.23'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.24'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/company':
@@ -133,6 +134,7 @@ def main(default_app='tpv'):
                     data=store.state();data['user']=user;data['pos_profile']=pos_profiles.active(store)
                     with store.db() as c:data['permissions']=permissions.rights(c,user['id'])
                     data['cash_session']=cash_register.status(store)
+                    hospitality.extend_state(store,data,user['id'])
                     data['button_layout']=button_layout.read(store)
                     data['ticket_template']=ticket_templates.current(store)
                     profile_template=data['pos_profile']['options']['receipt_template_id'] if data['pos_profile'] else None
@@ -207,6 +209,8 @@ def main(default_app='tpv'):
                     return self.reply(200,{'ok':True})
                 user=self.user()
                 if not user:return self.reply(401,{'error':'La sesión ha terminado. Entra con tu usuario.'})
+                if action in hospitality.TPV_ACTIONS|hospitality.ADMIN_ACTIONS:
+                    return self.reply(200,hospitality.mutate(store,action,data,user['id'],args.app))
                 if action in ('line_discount','line_weight'):
                     if args.app!='tpv':return self.reply(403,{'error':'Los cambios de línea se realizan en el TPV.'})
                     return self.reply(200,line_pricing.mutate(store,action,data,user['id']))
@@ -317,7 +321,7 @@ def main(default_app='tpv'):
     if not args.no_browser and not args.browser:
         title='Marchan2 · '+('TPV' if args.app=='tpv' else 'Administración')
         try:
-            if desktop.run(server,url,title,folder/'webview',fullscreen=args.fullscreen):
+            if desktop.run(server,url,title,folder/'webview',fullscreen=args.fullscreen,log=folder/'desktop.log'):
                 server.server_close();return
         except Exception:pass
     if not args.no_browser:webbrowser.open(url)

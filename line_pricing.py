@@ -31,6 +31,7 @@ def weight(value):
 
 
 def net_price(base,kind,value):
+    if kind=='invite':return 0
     if kind=='percent':return (base*(10000-value)+5000)//10000
     if kind=='amount':
         if value>base:raise ValueError('El descuento no puede superar el precio de una unidad.')
@@ -41,7 +42,7 @@ def net_price(base,kind,value):
 def labels(line):
     line['weight_label']=(f"{line['weight_milli']/1000:.3f} KG".replace('.',',')) if line.get('weight_milli') else ''
     kind=line.get('discount_kind');value=line.get('discount_value',0)
-    line['discount_label']=('DTO '+f'{value/100:.2f}'.replace('.',',')+' %') if kind=='percent' else ('DTO '+f'{value/100:.2f}'.replace('.',',')+' € / UD') if kind=='amount' else ''
+    line['discount_label']=('DTO '+f'{value/100:.2f}'.replace('.',',')+' %') if kind=='percent' else ('DTO '+f'{value/100:.2f}'.replace('.',',')+' € / UD') if kind=='amount' else 'INVITACIÓN' if kind=='invite' else ''
 
 
 def mutate(store,action,data,actor):

@@ -1,5 +1,14 @@
 # Cambios de Marchan2
 
+## 0.24
+- Estudio de Ágora, Numier y Qamarero en ESTUDIO_COMPETENCIA.md, con matriz de funciones y pendientes.
+- Nuevo módulo hospitality.py: comensales, clientes (CRM local con alergias y VIP), tipo de servicio (mesa, barra, llevar, domicilio), invitaciones, descuento de ticket, unir cuentas, alérgenos UE y favoritos por producto, fichaje y plano de mesas.
+- TPV (web/tpv-plus.js): vista Clientes, plano de sala, chips de comensales/cliente/servicio en la cuenta, aviso de alergias, pestañas Favoritos y Más vendidos, siglas de alérgenos en las teclas, botón de fichaje y siete acciones nuevas configurables.
+- Administración (web/admin-plus.js): Clientes, Alérgenos y favoritos, y editor de plano por arrastre.
+- Ocho informes nuevos (38 disponibles) y tres permisos nuevos.
+- La ventana de escritorio funciona con el ZIP descargado: se retira la marca de Internet de los archivos propios y los errores se guardan en desktop.log.
+- 91 pruebas Python.
+
 ## 0.23
 - TPV y Administración se ejecutan como aplicación de escritorio en ventana propia (pywebview + WebView2), maximizada. Cerrar la ventana o «Cerrar aplicación» detiene el servidor local. Opciones `--browser` y `--fullscreen`; si no hay WebView2 se usa el navegador.
 - Pantalla completa con botón lateral o F11.

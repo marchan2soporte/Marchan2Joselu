@@ -344,3 +344,155 @@ dialog::backdrop { background: #061012a6; backdrop-filter: blur(6px); }
 :root[data-theme="dark"] .dark { background: #2b4a50; color: #fff; }
 .payment-choice { border-radius: 18px; transition: transform .08s; }
 .payment-choice:active { transform: scale(.97); }
+
+/* =====================================================================
+   0.24 · Funciones de hostelería y rediseño de pantallas
+   ===================================================================== */
+
+/* Cabecera: fichaje */
+.clock-in { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-weight: 700; font-size: 13px; }
+.clock-in.working { background: color-mix(in srgb, var(--green) 14%, var(--surface)); border-color: color-mix(in srgb, var(--green) 45%, var(--line)); color: var(--green); }
+.clock-in.working i { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 25%, transparent); animation: pulse 1.6s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent; } }
+.clock-panel { text-align: center; padding: 18px 0 8px; }
+.clock-big { font-size: 64px; font-weight: 800; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+.clock-panel p { color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+
+/* Selector segmentado */
+.segmented { display: inline-flex; padding: 4px; gap: 4px; border-radius: 14px; background: var(--surface-3); }
+.segmented button { min-height: 38px; padding: 6px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; color: var(--muted); }
+.segmented button.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.segmented.wide { display: flex; margin-bottom: 14px; }
+.segmented.wide button { flex: 1; min-height: 48px; }
+
+/* Mesas: datos de ocupación */
+.table-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 11px; color: var(--muted); font-weight: 600; }
+.table-meta span { background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
+.table-card.occupied .table-meta span { background: color-mix(in srgb, #e0803a 16%, var(--surface)); color: #a7531a; }
+.table-meta .who { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table-card.cooking::after { content: "♨"; position: absolute; top: 10px; right: 12px; font-size: 16px; color: #e0803a; }
+.table-card.long-stay { box-shadow: 0 0 0 2px #d0533f inset, var(--shadow); }
+.hero-kpis { display: flex; gap: 14px; justify-content: flex-end; margin-top: 10px; font-size: 12px; color: #b9cfc6; flex-wrap: wrap; }
+.hero-kpis b { color: #fff; font-size: 15px; }
+
+/* Plano de sala */
+.table-grid.floor-grid { padding: 18px; border-radius: 22px; border: 1px dashed var(--line); background-color: var(--surface-2);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--muted) 28%, transparent) 1px, transparent 1.5px); background-size: 22px 22px; }
+.floor-hint { margin-top: 8px; }
+.table-grid.floor-plan { display: block; position: relative; height: max(440px, calc(100dvh - 330px)); border-radius: 22px; border: 1px dashed var(--line);
+  background-color: var(--surface-2);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--muted) 28%, transparent) 1px, transparent 1.5px);
+  background-size: 22px 22px; overflow: hidden; }
+.floor-plan .table-card { position: absolute; width: 132px; min-height: 116px; padding: 12px; }
+.floor-plan .table-card.shape-round { border-radius: 50%; width: 126px; min-height: 126px; height: 126px; align-items: center; justify-content: center; text-align: center; padding: 12px; }
+.floor-plan .table-card.shape-round .table-shape { margin: 0 auto 4px; width: 44px; height: 34px; border-radius: 50%; }
+.floor-plan .table-card.shape-round .table-shape:before, .floor-plan .table-card.shape-round .table-shape:after { display: none; }
+.floor-plan .table-card.shape-round .table-bottom { flex-direction: column; align-items: center; margin-top: 2px; gap: 0; }
+.floor-plan .table-card.shape-round .table-meta { justify-content: center; margin-top: 4px; }
+.floor-plan .table-card.shape-long { width: 200px; }
+.floor-plan .table-card .table-shape { margin: 0 auto 10px; }
+.tpv-mode .floor-plan .table-card { min-height: 116px; }
+
+/* Venta: chips de la cuenta */
+.ticket-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 4px 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12px; font-weight: 700; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip.filled { background: color-mix(in srgb, var(--green) 12%, var(--surface)); border-color: color-mix(in srgb, var(--green) 40%, var(--line)); color: var(--green); }
+.chip.ghost { background: transparent; border-style: dashed; color: var(--muted); }
+.allergy-alert { margin-top: 8px; padding: 7px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; background: color-mix(in srgb, #d4a72c 18%, var(--surface)); color: #8a6510; }
+.allergy-alert.danger { background: var(--danger-bg); color: var(--danger); }
+.delivery-line { margin-top: 6px; font-size: 11px; color: var(--muted); }
+.service-line.invited > b { text-decoration: line-through; color: var(--muted); }
+.service-line.invited .line-qty { background: #c2477a; color: #fff; }
+
+/* Productos: alérgenos y favoritos */
+.product .product-top { display: flex; width: 100%; justify-content: space-between; align-items: center; }
+.fav-star { color: #d4a72c; font-size: 18px; }
+.allergen-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+.allergen-chips i, .allergen-tag { font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .3px; padding: 2px 5px; border-radius: 6px; background: color-mix(in srgb, #d4a72c 22%, var(--surface)); color: #7d5a08; margin-right: 2px; }
+:root[data-theme="dark"] .allergen-chips i, :root[data-theme="dark"] .allergen-tag { color: #f2cf73; }
+.family-tabs .pill.special, :root[data-theme] .family-tabs .pill.special:not(.active) { background: color-mix(in srgb, #d4a72c 18%, var(--surface)); color: #8a6510; }
+:root[data-theme] .family-tabs .pill.special.active { background: #d4a72c; color: #1d1405; border-color: #d4a72c; }
+:root[data-theme="dark"] .family-tabs .pill.special:not(.active) { color: #f2cf73; }
+
+/* Diálogos */
+.guest-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 6px 0 14px; }
+.guest-btn { min-height: 58px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); font-size: 20px; font-weight: 800; color: var(--ink); }
+.guest-btn.active, .guest-btn:active { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+.service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.service-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 96px; border-radius: 16px; background: var(--surface-2); border: 2px solid var(--line); font-weight: 750; color: var(--ink); }
+.service-choice b { font-size: 30px; }
+.service-choice.active { border-color: var(--green); background: color-mix(in srgb, var(--green) 10%, var(--surface)); }
+.reason-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+:root[data-theme] .reason-grid .pill.active { background: #c2477a; border-color: #c2477a; color: #fff; }
+.merge-list, .customer-list { display: grid; gap: 8px; }
+.pick-scroll { max-height: 48vh; overflow: auto; margin: 4px 0 8px; }
+.merge-row, .customer-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); }
+.merge-row:hover, .customer-row:hover { border-color: var(--green); }
+.merge-row strong { flex: 1; } .merge-row small { color: var(--muted); flex: 2; }
+.avatar-circle { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--ink); font-weight: 800; font-size: 14px; }
+.avatar-circle.vip { background: #d4a72c; color: #1d1405; }
+.customer-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.customer-main em { font-style: normal; font-size: 10px; background: #d4a72c; color: #1d1405; border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+.customer-main small { color: var(--muted); font-size: 12px; }
+.customer-main small.warn { color: var(--danger); font-weight: 700; }
+.customer-stats { display: grid; justify-items: end; min-width: 76px; }
+.customer-stats b { font-size: 15px; } .customer-stats small { color: var(--muted); font-size: 10px; }
+.compact-hero { padding: 22px 28px; }
+.form-grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-grid.two .span-2 { grid-column: 1 / -1; }
+.allergen-picker { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.allergen-picker legend { font-size: 12px; font-weight: 700; color: var(--muted); padding: 0 6px; }
+.check-chip { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font-size: 12px; cursor: pointer; }
+.check-chip input { width: 18px; height: 18px; min-height: 0; accent-color: var(--green); }
+.check-chip:has(input:checked) { border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, var(--surface)); }
+
+/* Administración: matriz de alérgenos y plano */
+.allergen-matrix { overflow: auto; }
+.allergen-matrix th, .allergen-matrix td { text-align: center; padding: 8px 6px; }
+.allergen-matrix th:first-child, .allergen-matrix td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+.allergen-matrix input { width: 20px; height: 20px; min-height: 0; accent-color: var(--green); }
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.row-actions .button { min-height: 36px; padding: 6px 12px; }
+.floor-editor { position: relative; height: 62vh; min-height: 420px; border-radius: 22px; border: 1px dashed var(--line); background-color: var(--surface-2);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--muted) 28%, transparent) 1px, transparent 1.5px); background-size: 22px 22px; touch-action: none; overflow: hidden; }
+.floor-table { position: absolute; width: 96px; height: 76px; display: grid; place-content: center; text-align: center; gap: 2px; border-radius: 14px; background: var(--surface); border: 2px solid var(--green); box-shadow: var(--shadow); cursor: grab; user-select: none; color: var(--ink); }
+.floor-table:active { cursor: grabbing; box-shadow: 0 12px 30px #0003; }
+.floor-table.shape-round { border-radius: 50%; width: 90px; height: 90px; }
+.floor-table.shape-long { width: 150px; }
+.floor-table small { color: var(--muted); font-size: 10px; }
+
+@media (max-width: 900px) { .form-grid.two { grid-template-columns: 1fr; } .guest-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* Cuenta compacta en la pantalla de venta */
+.selling .ticket-head { padding: 8px 14px 8px; }
+.selling .ticket-head h2 { font-size: 20px; }
+.selling .ticket-head > p { display: none; }
+.selling .ticket-chips { margin-top: 4px; gap: 4px; }
+.selling .chip { min-height: 28px; padding: 2px 9px; font-size: 11px; }
+.selling .allergy-alert { margin-top: 5px; padding: 4px 8px; font-size: 10.5px; }
+.selling .calc-keys button { min-height: 40px; }
+.selling .calc-tools button { min-height: 36px; }
+
+/* Cabecera de mesas más compacta */
+.table-hero { padding: 16px 24px; }
+.table-hero h2 { font-size: 22px; margin: 4px 0; }
+.table-hero p { margin: 0; }
+.table-hero .hero-number { font-size: 44px; }
+
+/* El plano del TPV usa la misma proporción que el editor */
+.table-grid.floor-plan { flex: none; height: 62vh; min-height: 420px; }
+
+/* Plano del TPV: tarjetas compactas del mismo tamaño que en el editor */
+.tpv-mode .floor-plan .table-card { width: 112px; min-height: 0; height: auto; padding: 9px 10px; border-radius: 14px; }
+.tpv-mode .floor-plan .table-card.shape-long { width: 168px; }
+.tpv-mode .floor-plan .table-card.shape-round { width: 104px; height: 104px; min-height: 104px; border-radius: 50%; padding: 10px; }
+.tpv-mode .floor-plan .table-shape { width: auto; height: auto; border: 0; background: none; margin: 0 0 2px; font-size: 19px; display: block; text-align: left; }
+.tpv-mode .floor-plan .table-card.shape-round .table-shape { text-align: center; width: auto; height: auto; }
+.tpv-mode .floor-plan .table-shape:before, .tpv-mode .floor-plan .table-shape:after { display: none; }
+.tpv-mode .floor-plan .table-card.occupied .table-shape { background: none; color: #c4631d; }
+.tpv-mode .floor-plan .table-bottom { font-size: 11px; gap: 4px; }
+.tpv-mode .floor-plan .table-bottom strong { font-size: 13px; }
+.tpv-mode .floor-plan .table-meta { margin-top: 4px; gap: 3px; font-size: 10px; }
+.tpv-mode .floor-plan .table-meta .who { display: none; }
+.tpv-mode .floor-plan .table-card small { display: none; }
+.tpv-mode .floor-plan .table-card::after { top: 6px; right: 8px; }

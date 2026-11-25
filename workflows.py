@@ -63,6 +63,8 @@ class WorkflowMixin:
         button_layout.initialize(self)
         import line_pricing
         line_pricing.initialize(self)
+        import hospitality
+        hospitality.initialize(self)
 
     def users(self,active_only=True):
         with self.db() as c:
