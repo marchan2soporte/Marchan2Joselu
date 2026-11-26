@@ -38,3 +38,20 @@ renderKitchen=async function(){const requested=prepFilter;
     clearInterval(kitchenTimer);kitchenTimer=setInterval(()=>{if(view!=='kitchen'){clearInterval(kitchenTimer);return}document.querySelectorAll('.kds-timer').forEach(t=>{const s=elapsed(t.dataset.since);t.textContent=clockText(s);const card=t.closest('.kitchen-card');card.classList.toggle('warn',s>=600&&s<1200);card.classList.toggle('late',s>=1200)})},1000);
     clearTimeout(renderKitchen.poll);renderKitchen.poll=setTimeout(()=>{if(view==='kitchen'&&!$('#modal').open)renderKitchen()},15000);
   }catch(e){toast(e.message,true)}};
+
+/* ---------- Comandero móvil (gestión desde el TPV principal) ---------- */
+const cmdActionDisabled=actionDisabled;
+actionDisabled=function(id){if(id==='comandero')return currentUser?.role!=='admin'||lanMode;return cmdActionDisabled(id)};
+const cmdExecuteAction=executeAction;
+executeAction=async function(id){if(id==='comandero'){if(actionDisabled(id)){toast('Solo un administrador desde el equipo principal.',true);return}closeModal();return comanderoDialog()}return cmdExecuteAction(id)};
+async function comanderoDialog(){let d;try{d=await api('comandero')}catch(e){toast(e.message,true);return}
+  const devices=d.devices.filter(x=>!x.revoked);
+  openModal(modalTitle('Comandero móvil','Los camareros toman comandas desde su móvil con su usuario y PIN.')+`<div class="cmd-status ${d.running?'on':''}">${d.running?`<b>● Activo</b> · Abre en el móvil <code>${esc(d.url)}</code>`:d.enabled?'<b>Activado</b> · Cierra y vuelve a abrir el TPV para empezar a escuchar en la red.':'<b>Desactivado</b>'}</div>
+  ${d.enabled?`<div class="cmd-code"><span>Código de emparejamiento</span><b>${esc(d.code.slice(0,3)+' '+d.code.slice(3))}</b><button class="button secondary" id="cmd-newcode">Cambiar código</button></div>`:''}
+  <p class="form-note">⚠ Usa solo la wifi privada del local con contraseña, nunca la wifi de clientes: la conexión dentro de la red local no va cifrada. Windows puede pedir permiso del firewall la primera vez.</p>
+  <div class="form-grid two"><label class="check-chip"><input type="checkbox" id="cmd-enabled" ${d.enabled?'checked':''}><span>Activar comandero en la red local</span></label><label>PUERTO<input id="cmd-port" inputmode="numeric" value="${d.port}"></label></div>
+  <h3 style="margin:14px 0 8px">Móviles emparejados (${devices.length})</h3><div class="merge-list">${devices.map(x=>`<div class="merge-row"><strong>📱 ${esc(x.name)}</strong><small>Emparejado ${esc(x.created.slice(0,10))}${x.last_seen?' · último uso '+esc(x.last_seen.replace('T',' ').slice(0,16)):''}</small><button class="button danger" data-cmd-revoke="${x.id}">Revocar</button></div>`).join('')||'<p class="muted">Ningún móvil emparejado.</p>'}</div>
+  <div class="form-actions"><button class="button secondary" data-close>Cerrar</button><button class="button primary" id="cmd-save">Guardar</button></div>`);
+  $('#cmd-newcode')&&($('#cmd-newcode').onclick=async()=>{await api('comandero_code',{});comanderoDialog()});
+  document.querySelectorAll('[data-cmd-revoke]').forEach(b=>b.onclick=async()=>{await api('comandero_revoke',{id:Number(b.dataset.cmdRevoke)});toast('Móvil revocado');comanderoDialog()});
+  $('#cmd-save').onclick=async()=>{try{const r=await api('comandero_config',{enabled:$('#cmd-enabled').checked,port:Number($('#cmd-port').value)});toast(r.enabled&&!r.running?'Guardado. Reinicia el TPV para activar el comandero.':'Guardado');comanderoDialog()}catch(e){toast(e.message,true)}}}

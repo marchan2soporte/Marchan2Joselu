@@ -1,4 +1,4 @@
-# Marchan2 0.24 — JoseluIA
+# Marchan2 0.25 — JoseluIA
 
 Copia de desarrollo **Marchan2Joselu**, creada el 26/10/2026 a partir de [Marchan2Pedro](https://github.com/marchan2soporte/Marchan2Pedro) en la base 0.21. Conserva el historial original; los cambios de esta copia se publican en Marchan2Joselu. Consulta [BASE_PEDRO.md](BASE_PEDRO.md) para el resumen de la revisión.
 
@@ -10,6 +10,17 @@ En Administración → Puntos de venta puedes configurar varios puestos y activa
 En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El papel de 80 mm admite inicialmente 48 columnas; puedes ajustar columnas, líneas de avance y corte por destino. Prueba primero «Sin corte» y después «Corte parcial» solo si el equipo dispone de cortador ESC/POS compatible. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. Los informes X/Z de jornada se abren desde Caja y jornada; usan el destino de impresión de Z del puesto. El antiguo resumen de prueba por fecha se conserva como compatibilidad interna, separado de los cierres nuevos.
 Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y en Windows 10 actualizado); no requiere instalar Python ni conexión a Internet. Si WebView2 no está disponible, la aplicación se abre en el navegador como antes.
+
+## Novedades 0.25 · carta avanzada, cocina, copias y comandero
+
+- **Tarifas y happy hour** (Administración → Tarifas): ajustes en % por centro de venta, días, franja horaria y categorías, con prioridad. Se aplican al añadir la línea; la cuenta muestra la tarifa y el TPV avisa cuando hay una tarifa horaria activa. Informe «Tarifas».
+- **Menús** (Administración → Menús): convierte un producto (p. ej. «MENÚ DEL DÍA») en un menú con apartados. En el TPV se eligen los platos; cocina los recibe con su orden y la cuenta cobra el precio del menú. El menú se cancela entero. Informe «Productos en menús».
+- **Monitor de cocina**: cronómetro por comanda (naranja a los 10 min, rojo a los 20), aviso sonoro de comanda nueva (se puede silenciar), refresco cada 15 s e informe «Tiempos de preparación».
+- **Escandallos** (Administración → Escandallos): ingredientes del almacén por producto o formato. Al cerrar una cuenta se descuentan automáticamente del almacén. Informes «Rentabilidad de la carta», «Márgenes por categorías» y «Márgenes por familias».
+- **Copias de seguridad** (Administración → Copias de seguridad): una diaria automática, otra en cada cierre de jornada y las manuales. Elige la carpeta (mejor un disco externo o USB) y cuántas conservar. Restaurar guarda antes una copia del estado actual.
+- **Comandero móvil**: en el TPV principal, Otros → Comandero móvil (administrador). Actívalo, reinicia el TPV y abre en el móvil la dirección que aparece (misma wifi). Cada móvil se empareja una vez con un código de 6 cifras y luego entra con su usuario y PIN. Los móviles se pueden revocar y desde ellos no se puede cerrar la aplicación. Usa solo la wifi privada del local: la conexión en la red local no va cifrada. Windows pedirá permiso del firewall la primera vez.
+- **VeriFactu (preparación)** (Administración → VeriFactu): registro interno de altas encadenado con huella SHA-256, comprobación de la cadena y enlace de cotejo del entorno de pruebas de la AEAT. **No envía nada a la AEAT, no está homologado y los tickets siguen siendo no fiscales.** Desactivado por defecto; necesita el NIF en Empresa.
+- **Rediseño**: cobro en efectivo en dos columnas sin desplazamiento, tablas, informes y directorio de administración renovados, y diseño adaptado al móvil.
 
 ## Novedades 0.24 · funciones de hostelería
 
@@ -72,7 +83,7 @@ La venta se reconoce al cerrar la cuenta. Un pago parcial se reconoce en cobros 
 No se calcula número de comensales ni margen comercial porque todavía no se registran los datos necesarios.
 
 ## Informes
-Biblioteca por áreas con buscador. 38 informes disponibles con fechas y exportación CSV compatible con Excel. Las consultas de ventas recorren todo el histórico del intervalo, no solo las últimas 100 cuentas.
+Biblioteca por áreas con buscador. 44 informes disponibles con fechas y exportación CSV compatible con Excel. Las consultas de ventas recorren todo el histórico del intervalo, no solo las últimas 100 cuentas.
 ALCANCE.md detalla el estado de cada informe. Los módulos pendientes no devuelven resultados ficticios.
 Las agrupaciones por familia/categoría utilizan la clasificación actual de la carta. Los informes de usuario atribuyen las ventas a quien abrió la cuenta; los cobros conservan quien los registró.
 El resumen de impuestos es orientativo, con IVA incluido y redondeo por tipo. No es una declaración ni un documento fiscal.
@@ -101,7 +112,7 @@ Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de dato
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-91 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+100 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
 Fuentes: Python, SQLite, pywebview y HTML/CSS/JS locales. El diseño está en web/theme.css (variables de color, modo oscuro y pantalla de venta).
 Dependencias: python -m pip install -r requirements.txt
 Ejecutar: python tpv.py / python admin.py (añade --browser para usar el navegador o --fullscreen para pantalla completa)

@@ -1,6 +1,6 @@
 # Estudio de competencia: Ágora, Numier y Qamarero
 
-Fecha: 24/11/2026 · Versión de Marchan2 tras el estudio: 0.24
+Fecha: 24/11/2026 · Versión de Marchan2 tras el estudio: 0.25
 
 Se han revisado las webs públicas de producto de los tres TPV. Son páginas comerciales: describen lo que anuncian, no documentación técnica verificada. El manual de Ágora (agorapos.com/manual) no estaba disponible al consultarlo.
 
@@ -26,8 +26,8 @@ Leyenda: ✅ disponible · 🆕 añadido en 0.24 · ⏳ pendiente · 🚫 fuera 
 | Venta | Descuento de ticket entero | ✔ | ✔ | ✔ | 🆕 |
 | Venta | Invitaciones con motivo | | ✔ | | 🆕 |
 | Venta | Tipo de servicio: mesa, barra, llevar, domicilio | ✔ | ✔ | ✔ | 🆕 |
-| Venta | Múltiples tarifas / happy hour | | ✔ | ✔ | ⏳ |
-| Venta | Menús y combos | ✔ | ✔ | ✔ | ⏳ |
+| Venta | Múltiples tarifas / happy hour | | ✔ | ✔ | 🆕 0.25 |
+| Venta | Menús y combos | ✔ | ✔ | ✔ | 🆕 0.25 |
 | Venta | Promociones | ✔ | ✔ | ✔ | ⏳ |
 | Sala | Mesas por centro de venta | ✔ | ✔ | ✔ | ✅ |
 | Sala | Plano de sala editable | ✔ | ✔ | | 🆕 |
@@ -37,7 +37,7 @@ Leyenda: ✅ disponible · 🆕 añadido en 0.24 · ⏳ pendiente · 🚫 fuera 
 | Sala | Unir cuentas | ✔ | | ✔ | 🆕 |
 | Sala | Dividir cuenta por productos o importe | ✔ | ✔ | ✔ | ✅ |
 | Cocina | Envío a cocina/barra, órdenes de preparación, marchar | ✔ | ✔ | ✔ | ✅ |
-| Cocina | Monitor de cocina con tiempos | ✔ | ✔ | ✔ | ✅ básico / ⏳ tiempos |
+| Cocina | Monitor de cocina con tiempos | ✔ | ✔ | ✔ | 🆕 0.25 |
 | Cobro | Efectivo, tarjeta, pagos parciales y mixtos | ✔ | ✔ | ✔ | ✅ |
 | Cobro | Propinas | ✔ | | ✔ | ✅ |
 | Cobro | Datáfono integrado | ✔ | ✔ | ✔ | 🚫 |
@@ -54,16 +54,17 @@ Leyenda: ✅ disponible · 🆕 añadido en 0.24 · ⏳ pendiente · 🚫 fuera 
 | Personal | Usuarios, PIN y perfiles de permisos | ✔ | ✔ | ✔ | ✅ |
 | Personal | Fichaje de entrada y salida | | ✔ | ✔ | 🆕 |
 | Stock | Proveedores, entradas, mermas, valoración | ✔ | ✔ | ✔ | ✅ |
-| Stock | Escandallos y descuento automático por venta | ✔ | ✔ | ✔ | ⏳ |
-| Informes | Ventas, productos, usuarios, caja | ✔ | ✔ | ✔ | ✅ (38 informes) |
+| Stock | Escandallos y descuento automático por venta | ✔ | ✔ | ✔ | 🆕 0.25 |
+| Informes | Ventas, productos, usuarios, caja | ✔ | ✔ | ✔ | ✅ (44 informes) |
 | Informes | Invitaciones, comensales, clientes, alérgenos, fichajes | ✔ | ✔ | ✔ | 🆕 |
 | Pedidos | Tienda online, delivery, plataformas | ✔ | ✔ | ✔ | 🚫 |
 | Reservas | Libro de reservas y widget web | ✔ | | ✔ | ⏳ |
-| Comandero | App de comandas en móvil/PDA | ✔ | ✔ | ✔ | ⏳ (necesita red local segura) |
-| Fiscal | VeriFactu | ✔ | ✔ | ✔ | ⏳ obligatorio |
+| Comandero | App de comandas en móvil/PDA | ✔ | ✔ | ✔ | 🆕 0.25 (red local, móviles emparejados) |
+| Fiscal | VeriFactu | ✔ | ✔ | ✔ | ⏳ registro encadenado en preparación (0.25), sin envío |
 | Fiscal | TicketBAI | | | ✔ | ⏳ |
 | Gestión | Backoffice en la nube y multi-local | ✔ | ✔ | ✔ | 🚫 |
 | Equipo | Aplicación de escritorio Windows | ✔ | ✔ | | ✅ |
+| Sistema | Copias de seguridad automáticas y restauración | ✔ | ✔ | ✔ | 🆕 0.25 |
 
 ## Qué se ha incorporado en 0.24
 
@@ -80,16 +81,23 @@ Leyenda: ✅ disponible · 🆕 añadido en 0.24 · ⏳ pendiente · 🚫 fuera 
 - **Plano de sala**: editor por arrastre en Administración (forma y plazas por mesa) y vista Plano o Lista en el TPV, con comensales, tiempo y cliente de cada mesa.
 - **Nuevos informes**: Invitaciones, Alérgenos por producto, Comensales por centro de venta, Cancelaciones por usuario, Descuentos por usuario y tipo, Ventas a cliente, Productos vendidos a cada cliente y Control horario.
 
+## Qué se ha incorporado en 0.25
+
+- **Tarifas y happy hour** por centro, días, franja horaria y categorías; aviso en el TPV cuando hay una tarifa horaria activa.
+- **Menús**: un producto con apartados; el cliente elige un plato de cada uno, cocina recibe cada plato por su orden y la cuenta cobra el precio del menú.
+- **Monitor de cocina** con cronómetro por comanda (verde, naranja a los 10 min, rojo a los 20), aviso sonoro, refresco automático e informe de tiempos.
+- **Escandallos**: ingredientes por producto o formato; las ventas descuentan stock al cerrar la cuenta y hay informes de rentabilidad y márgenes.
+- **Copias de seguridad**: diaria automática, al cerrar la jornada y manuales; carpeta configurable (disco externo o USB) y restauración con copia previa.
+- **Comandero móvil** en la red local con emparejamiento por código, móviles revocables y diseño para el teléfono.
+- **VeriFactu (preparación)**: registro de alta encadenado con huella SHA-256 (verificada con el ejemplo publicado por la AEAT) y comprobación de integridad. Sin envío ni homologación.
+- Rediseño del cobro (dos columnas sin scroll), informes, tablas y directorio de administración.
+
 ## Pendiente, por prioridad recomendada
 
-1. **VeriFactu**: obligatorio en España (según Numier, desde el 1/1/2026 para empresas y el 1/7/2026 para autónomos). Requiere registro encadenado con huella (hash), QR en el ticket, envío a la AEAT y declaración responsable del fabricante. Es el bloqueo principal para usar Marchan2 en producción. TicketBAI en el País Vasco.
-2. **Tarifas y happy hour**: precios por centro de venta y franja horaria.
-3. **Menús y combos**: menú del día con elecciones por plato.
-4. **Comandero móvil**: requiere abrir el servidor a la red local con autenticación y cifrado; hoy solo escucha en 127.0.0.1 por seguridad.
-5. **Monitor de cocina con tiempos**: tiempo por comanda y alertas.
-6. **Escandallos**: descuento automático de stock por venta.
-7. **Reservas**, fidelización y tarjetas regalo.
-8. **Integraciones** (datáfono, cajones de efectivo, delivery, pago QR): dependen de acuerdos y SDK de terceros.
+1. **VeriFactu**: el registro encadenado ya existe. Falta el envío a la AEAT con certificado, las anulaciones y subsanaciones, las facturas completas y rectificativas, la declaración responsable y el QR en el ticket. Obligatorio en España (según Numier, desde el 1/1/2026 para empresas y el 1/7/2026 para autónomos). TicketBAI en el País Vasco.
+2. **Cifrado del comandero** (HTTPS en la red local) y app instalable en el móvil.
+3. **Reservas**, fidelización y tarjetas regalo.
+4. **Integraciones** (datáfono, cajones de efectivo, delivery, pago QR): dependen de acuerdos y SDK de terceros.
 
 ## Fuentes
 

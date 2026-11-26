@@ -20,6 +20,7 @@ import hospitality
 import carta
 import backup
 import verifactu
+import comandero
 import json
 import os
 from pathlib import Path
@@ -44,6 +45,7 @@ def main(default_app='tpv'):
     parser.add_argument('--app',choices=['tpv','admin'],default=default_app)
     parser.add_argument('--no-browser',action='store_true',help='Solo servidor, sin ventana (pruebas).')
     parser.add_argument('--browser',action='store_true',help='Abrir en el navegador en lugar de la ventana de escritorio.')
+    parser.add_argument('--lan-host',default='0.0.0.0',help=argparse.SUPPRESS)
     parser.add_argument('--fullscreen',action='store_true',help='Ventana a pantalla completa (modo quiosco del TPV).')
     args=parser.parse_args()
     folder=Path(args.data) if args.data else Path(os.environ.get('LOCALAPPDATA',str(Path.home())))/'Marchan2'
@@ -57,7 +59,11 @@ def main(default_app='tpv'):
     token=secrets.token_urlsafe(32)
     sessions={};attempts={};guard=threading.Lock()
 
+    comandero.initialize(store)
+    lan={'port':None}
+
     class Handler(BaseHTTPRequestHandler):
+        lan=False
         def log_message(self,*values):pass
 
         def reply(self,status,value,kind='application/json; charset=utf-8'):
@@ -85,7 +91,7 @@ def main(default_app='tpv'):
             try:
                 path=self.path.split('?')[0]
                 if path=='/':
-                    html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
+                    html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__LAN__','1' if self.lan else '0').replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
                 if path in ('/app.js','/receipt.js','/style.css','/theme.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js',f'/{args.app}-plus.js',f'/{args.app}-carta.js'):
@@ -93,9 +99,12 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.24'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.25'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
+                if path=='/api/comandero':
+                    if user['role']!='admin' or self.lan:return self.reply(403,{'error':'El comandero se gestiona desde el TPV principal con un administrador.'})
+                    return self.reply(200,comandero.status(store,lan['port']))
                 if path=='/api/verifactu':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,verifactu.status(store))
@@ -236,6 +245,13 @@ def main(default_app='tpv'):
                         try:result['backup']=backup.create(store,'cierre')['name']
                         except Exception:result['backup_warning']='No se pudo crear la copia de seguridad del cierre. Revisa la carpeta de copias.'
                     return self.reply(200,result)
+                if action in ('comandero_config','comandero_code','comandero_revoke'):
+                    if user['role']!='admin' or self.lan:return self.reply(403,{'error':'Solo un administrador desde el equipo principal.'})
+                    if action=='comandero_config':result=comandero.configure(store,data)
+                    elif action=='comandero_code':result=comandero.new_code(store)
+                    else:result=comandero.revoke(store,data.get('id'))
+                    result['running']=lan['port'] is not None
+                    return self.reply(200,result)
                 if action=='verifactu_toggle':
                     if args.app!='admin' or user['role']!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,verifactu.set_enabled(store,data.get('enabled') is True))
@@ -310,6 +326,7 @@ def main(default_app='tpv'):
                     if args.app=='tpv':permissions.require(store,user['id'],'print_retry')
                     result={'print_warnings':printing.dispatch(store,[int(data['job_id'])])}
                     return self.reply(200,result)
+                if action=='shutdown' and self.lan:return self.reply(403,{'error':'La aplicación solo se cierra desde el equipo principal.'})
                 if action=='shutdown':
                     self.reply(200,{'ok':True});threading.Thread(target=self.server.shutdown,daemon=True).start();return
                 if action in ('supplier','stock_item','stock_move'):
@@ -339,7 +356,40 @@ def main(default_app='tpv'):
             except (ValueError,KeyError,TypeError) as error:self.reply(400,{'error':str(error)})
             except Exception:self.reply(500,{'error':'No se pudo guardar. La operación se ha deshecho.'})
 
+    LAN_OPEN={'/','/logo.png','/style.css','/theme.css'}
+
+    class LanHandler(Handler):
+        lan=True
+        def allowed(self):return True
+        def device(self):
+            path=self.path.split('?')[0]
+            if path in LAN_OPEN or (path.endswith('.js') and not path.startswith('/api/')):return True
+            return comandero.device_ok(store,self.headers.get('X-Marchan2-Device'))
+        def do_GET(self):
+            if not self.device():return self.reply(401,{'error':'Empareja este móvil con el código que muestra el TPV.','pair_required':True})
+            return super().do_GET()
+        def do_POST(self):
+            if self.path=='/api/pair':
+                if self.headers.get('X-Marchan2-Token')!=token:return self.reply(403,{'error':'Vuelve a cargar la página.'})
+                try:
+                    size=int(self.headers.get('Content-Length','0'))
+                    if size<1 or size>10_000:raise ValueError('Petición no válida.')
+                    data=json.loads(self.rfile.read(size))
+                    return self.reply(200,comandero.pair(store,data.get('code'),data.get('name')))
+                except PermissionError as error:return self.reply(403,{'error':str(error)})
+                except (ValueError,TypeError):return self.reply(400,{'error':'Petición no válida.'})
+            if not self.device():return self.reply(401,{'error':'Empareja este móvil con el código que muestra el TPV.','pair_required':True})
+            return super().do_POST()
+
     server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
+    if args.app=='tpv' and comandero.enabled_port(store):
+        try:
+            lan_server=ThreadingHTTPServer((args.lan_host,comandero.enabled_port(store)),LanHandler)
+            lan['port']=lan_server.server_port
+            threading.Thread(target=lan_server.serve_forever,daemon=True).start()
+            print('Comandero móvil · '+comandero.status(store,lan['port'])['url'],flush=True)
+        except OSError as error:
+            (folder/'desktop.log').open('a',encoding='utf8').write(f'No se pudo abrir el comandero móvil: {error}'+chr(10))
     backup.start_scheduler(store,threading.Event())
     url=f'http://127.0.0.1:{server.server_port}'
     (folder/f'session-{args.app}.json').write_text(json.dumps({'url':url,'pid':os.getpid(),'app':args.app}),encoding='utf8')

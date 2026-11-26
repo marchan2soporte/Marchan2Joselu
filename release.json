@@ -1,18 +1,18 @@
 {
-  "version": "0.24",
+  "version": "0.25",
   "name": "Marchan2",
   "repository": "https://github.com/marchan2soporte/Marchan2Joselu",
-  "portable_directory": "Marchan2_v0.24",
-  "portable_filename": "Marchan2_v0.24_Windows.zip",
+  "portable_directory": "Marchan2_v0.25",
+  "portable_filename": "Marchan2_v0.25_Windows.zip",
   "python": "3.14",
   "validation": {
-    "unit_tests": 91,
+    "unit_tests": 100,
     "source_integration": "passed",
     "frozen_integration": "passed",
     "javascript_tests": 4
   },
   "reports": {
-    "available": 38,
+    "available": 44,
     "listed": 70
   },
   "status": "prototype",

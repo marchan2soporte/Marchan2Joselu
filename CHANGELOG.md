@@ -1,5 +1,13 @@
 # Cambios de Marchan2
 
+## 0.25
+- carta.py: tarifas y happy hour, menús con apartados, escandallos con descuento de stock al cobrar, tiempos de cocina y seis informes nuevos (44 disponibles).
+- backup.py: copia diaria automática, al cerrar jornada y manual; carpeta y retención configurables; restauración con copia previa y comprobación de integridad.
+- comandero.py: servicio opcional en la red local para móviles emparejados por código (token con huella SHA-256, bloqueo tras 5 fallos, revocación, sin cierre remoto) y diseño móvil.
+- verifactu.py: registro de alta encadenado con huella SHA-256 según el algoritmo publicado por la AEAT, verificación de la cadena y URL de cotejo de pruebas. Sin envío ni homologación.
+- Rediseño del cobro, tablas, informes y administración.
+- 100 pruebas Python.
+
 ## 0.24
 - Estudio de Ágora, Numier y Qamarero en ESTUDIO_COMPETENCIA.md, con matriz de funciones y pendientes.
 - Nuevo módulo hospitality.py: comensales, clientes (CRM local con alergias y VIP), tipo de servicio (mesa, barra, llevar, domicilio), invitaciones, descuento de ticket, unir cuentas, alérgenos UE y favoritos por producto, fichaje y plano de mesas.

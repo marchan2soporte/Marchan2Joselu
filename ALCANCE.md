@@ -1,4 +1,4 @@
-# Alcance funcional de Marchan2 0.24
+# Alcance funcional de Marchan2 0.25
 
 Administración → Puntos de venta → Impresoras permite escoger entre las impresoras instaladas en Windows. El ticket de prueba puede imprimirse manualmente en una cola elegida o automáticamente al completar el cobro; el informe Z de prueba admite otra cola. Se pueden configurar rutas de impresión de cocina para BARRA, COCINA o ambos tipos, opcionalmente filtradas por centro de venta. Al preparar o marchar productos, se crean trabajos con las líneas recién enviadas. También funciona cuando la preparación automática está activada.
 
@@ -30,7 +30,7 @@ Siguen pendientes: recargo por servicio, datos de comensales e invitaciones, dev
 
 Administración → Plantillas de ticket permite crear, copiar, editar y eliminar diseños de prueba; elegir 56 mm, variantes de 80 mm o A4; añadir texto e imágenes PNG/JPEG pequeñas a cabecera y pie; y configurar orden de productos, hora, usuario, impuestos orientativos, notas, ubicación, identificador interno, precio unitario y propinas. La plantilla predeterminada se aplica al detalle imprimible de las cuentas en TPV y Administración. La vista previa usa datos ficticios. La impresión directa a una cola de Windows usa una versión de texto del ticket; si no hay cola asignada, se abre el diálogo del sistema con el diseño visual. Las imágenes no se incluyen en la impresión directa de texto. No se generan facturas fiscales ni códigos QR fiscales.
 
-38 informes disponibles de 70 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.
+44 informes disponibles de 70 apartados identificados. Los pendientes requieren más desarrollo; no son solo informes vacíos.
 
 | Área | Informe | Estado |
 |---|---|---|
@@ -52,13 +52,13 @@ Administración → Plantillas de ticket permite crear, copiar, editar y elimina
 | Carta y rentabilidad | Grupos mayores | Pendiente |
 | Carta y rentabilidad | Familias y productos | Disponible |
 | Carta y rentabilidad | Categorías y productos | Disponible |
-| Carta y rentabilidad | Productos en menús | Pendiente |
-| Carta y rentabilidad | Márgenes por familias | Pendiente |
-| Carta y rentabilidad | Márgenes por categorías | Pendiente |
+| Carta y rentabilidad | Productos en menús | Disponible |
+| Carta y rentabilidad | Márgenes por familias | Disponible |
+| Carta y rentabilidad | Márgenes por categorías | Disponible |
 | Carta y rentabilidad | Promociones y productos | Pendiente |
 | Carta y rentabilidad | Alérgenos por producto | Disponible |
 | Carta y rentabilidad | Histórico de ventas | Disponible |
-| Carta y rentabilidad | Rentabilidad de la carta | Pendiente |
+| Carta y rentabilidad | Rentabilidad de la carta | Disponible |
 | Carta y rentabilidad | Top 50 formatos | Disponible |
 | Carta y rentabilidad | Top 50 productos | Disponible |
 | Carta y rentabilidad | Ventas diarias | Disponible |
@@ -75,7 +75,7 @@ Administración → Plantillas de ticket permite crear, copiar, editar y elimina
 | Espacios | Comensales por centro de venta | Disponible |
 | Espacios | Operaciones por centro de venta | Disponible |
 | Cobros y caja | Formas de pago | Disponible |
-| Cobros y caja | Tarifas | Pendiente |
+| Cobros y caja | Tarifas | Disponible |
 | Cobros y caja | Movimientos de caja | Disponible |
 | Cobros y caja | Cobros pendientes | Disponible |
 | Cobros y caja | Propinas por formas de pago | Pendiente |
@@ -98,7 +98,7 @@ Administración → Plantillas de ticket permite crear, copiar, editar y elimina
 | Almacén | Pagos pendientes | Pendiente |
 | Almacén | Pedidos por recibir | Pendiente |
 | Almacén | Valoración de mermas | Disponible |
-| Cocina | Tiempos de preparación | Pendiente |
+| Cocina | Tiempos de preparación | Disponible |
 | Diarios | Diario de facturas | Pendiente |
 | Diarios | Diario de albaranes | Pendiente |
 | Diarios | Diario de pedidos | Pendiente |

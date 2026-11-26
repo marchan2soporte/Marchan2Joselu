@@ -634,3 +634,69 @@ dialog:has(#tendered) .modal-title { margin-bottom: 0; }
 .vf-card p, .vf-card li { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .vf-card ul { margin: 0; padding-left: 18px; }
 .vf-hash { font-size: 11px; background: var(--surface-2); padding: 3px 6px; border-radius: 6px; }
+
+/* =====================================================================
+   Comandero móvil y pantallas estrechas (≤ 760 px)
+   ===================================================================== */
+.pair-panel { max-width: 460px; margin: 10px auto; padding: 22px; display: grid; gap: 10px; }
+.cmd-status { padding: 12px 14px; border-radius: 14px; background: var(--surface-2); margin-bottom: 10px; font-size: 13px; }
+.cmd-status.on { background: color-mix(in srgb, var(--green) 12%, var(--surface)); color: var(--green); }
+.cmd-status code { font-size: 15px; font-weight: 800; color: var(--ink); }
+.cmd-code { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: var(--surface-2); margin-bottom: 10px; }
+.cmd-code span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.cmd-code b { font-size: 34px; letter-spacing: 6px; flex: 1; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 760px) {
+  .rail { inset: auto 0 0 0; width: 100% !important; height: 62px; flex-direction: row; padding: 4px 6px; z-index: 50; }
+  .rail .brand, .rail-bottom .live-dot, .rail-bottom small, #fullscreen-toggle { display: none; }
+  .rail nav { display: flex !important; flex: 1; margin: 0; gap: 2px; }
+  .nav { padding: 6px 2px; font-size: 10px; gap: 2px; border-radius: 12px; }
+  .nav svg { width: 22px; height: 22px; }
+  .nav.active::before { left: 20%; right: 20%; top: -4px; bottom: auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
+  .rail-bottom { flex-direction: row; margin: 0; gap: 4px; }
+  .rail-tool, .rail-bottom #exit { width: 40px; height: 40px; margin: 0; }
+  .shell, .selling .shell { margin-left: 0 !important; padding-bottom: 64px; }
+  header, .tpv-mode.selling header { padding: 8px 12px !important; gap: 8px; }
+  header h1, .tpv-mode h1, .tpv-mode.selling header h1 { font-size: 18px !important; margin: 0; }
+  header .eyebrow, .header-right .demo, .header-right .clock { display: none; }
+  .header-right { gap: 6px; }
+  .clock-in { min-height: 36px; padding: 4px 10px; font-size: 11px; }
+  .user-switch { min-height: 36px; padding: 4px 10px; font-size: 12px; }
+  .user-switch small { display: none; }
+  main, .tpv-mode:not(.login-mode) main, .tpv-mode.selling main { padding: 6px 10px 10px !important; }
+  footer { display: none; }
+  .tpv-mode:not(.login-mode) .shell, .tpv-mode.selling .shell { height: auto; min-height: 100dvh; overflow: visible; }
+  .tpv-mode.selling main { overflow: visible; }
+
+  /* Venta en el móvil */
+  .sale-status { font-size: 9px; padding-bottom: 4px; }
+  .sale-status > span:last-child { display: none; }
+  .selling .service-layout { display: flex !important; flex-direction: column; gap: 10px; }
+  .selling .service-catalog { order: 1; max-height: none; overflow: visible; }
+  .selling .service-ticket { order: 2; height: auto !important; min-height: 0 !important; }
+  .selling .service-lines { max-height: 40vh; }
+  .selling .ticket-calculator { display: none; }
+  .selling .service-catalog .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+  .selling .service-catalog .product { min-height: 96px !important; padding: 10px; gap: 4px; }
+  .selling .service-catalog .product strong { font-size: 12px !important; }
+  .selling .service-catalog .product .price { font-size: 15px; }
+  .product .product-symbol { width: 28px; height: 28px; font-size: 13px; }
+  .formats-count { display: none; }
+  .selling .service-actions { order: 3; position: sticky !important; bottom: 64px; display: flex !important; flex-direction: row !important; overflow-x: auto; gap: 6px; padding: 8px 0; background: var(--bg); z-index: 20; }
+  .selling .service-actions .action-tile { flex: 0 0 86px; min-height: 64px !important; padding: 6px 4px; }
+  .selling .service-actions .action-tile.pay-action { flex-basis: 110px; }
+  .selling .service-actions .action-tile > span { font-size: 11px !important; }
+  .selling .service-actions .action-tile.pay-action > span { font-size: 15px !important; }
+
+  /* Mesas, diálogos y tablas */
+  .table-hero { display: none; }
+  .topbar { flex-wrap: wrap; }
+  .tpv-mode .table-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
+  .tpv-mode .table-card { min-height: 96px !important; padding: 8px; }
+  .table-grid.floor-plan { display: grid !important; height: auto; min-height: 0; padding: 10px; }
+  .floor-plan .table-card { position: static !important; width: auto !important; height: auto !important; border-radius: 14px !important; }
+  dialog { width: 100vw !important; max-width: 100vw; max-height: 92dvh; margin: auto 0 0; border-radius: 22px 22px 0 0; padding: 18px 14px; }
+  #modal-content:has(#tendered), #modal-content:has(#split-value) { display: block; }
+  .guest-grid { grid-template-columns: repeat(4, 1fr); }
+  .admin-table { font-size: 12px; }
+}
