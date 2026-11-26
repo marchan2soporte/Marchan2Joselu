@@ -21,7 +21,14 @@ ALLERGENS = {
 SERVICE_TYPES = {'mesa': 'Mesa', 'barra': 'Barra', 'llevar': 'Para llevar', 'domicilio': 'Domicilio'}
 TPV_ACTIONS = {'order_guests', 'order_customer', 'order_service', 'ticket_discount', 'invite',
                'merge', 'clock', 'customer_save'}
-ADMIN_ACTIONS = {'customer_save', 'customer_delete', 'product_extra', 'table_layout'}
+ADMIN_ACTIONS = {'customer_save', 'customer_delete', 'product_extra', 'table_layout', 'prep_notes_save'}
+DEFAULT_PREP_NOTES = ['SIN CEBOLLA', 'SIN SAL', 'SIN GLUTEN', 'POCO HECHO', 'AL PUNTO', 'MUY HECHO', 'PARA COMPARTIR',
+                      'SALSA APARTE', 'SIN HIELO', 'CON HIELO', 'URGENTE', 'PARA LLEVAR']
+
+
+def prep_notes(c):
+    row = c.execute("SELECT value FROM settings WHERE key='prep_notes'").fetchone()
+    return json.loads(row['value']) if row else list(DEFAULT_PREP_NOTES)
 from permissions import NEW_HOSPITALITY_RIGHTS as RIGHTS
 NOW = lambda: datetime.now().isoformat(timespec='seconds')
 
@@ -96,6 +103,7 @@ def extend_state(store, data, user_id):
         data['service_types'] = SERVICE_TYPES
         data['customers'] = customers(c)
         data['clock'] = clock_status(c, user_id)
+        data['prep_notes'] = prep_notes(c)
         extra = {r['id']: r for r in c.execute('SELECT id, allergens, favorite FROM products')}
         for p in data.get('products', []):
             p['allergens'] = json.loads(extra[p['id']]['allergens']) if p['id'] in extra else []
@@ -167,6 +175,18 @@ def mutate(store, action, data, actor, app):
             else:
                 cid = c.execute('INSERT INTO customers(name,phone,email,tax_id,address,notes,allergens,vip,created) VALUES(?,?,?,?,?,?,?,?,?)', values + (NOW(),)).lastrowid
             return {'customer_id': cid}
+
+        if action == 'prep_notes_save':
+            notes = data.get('notes')
+            if not isinstance(notes, list) or len(notes) > 40:
+                raise ValueError('Hasta 40 notas rápidas.')
+            clean = []
+            for n in notes:
+                n = text(n, 40, 'Nota').upper()
+                if n and n not in clean:
+                    clean.append(n)
+            c.execute("INSERT INTO settings(key,value) VALUES('prep_notes',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (json.dumps(clean),))
+            return {'notes': clean}
 
         if action == 'product_extra':
             pid = int(data['product_id'])

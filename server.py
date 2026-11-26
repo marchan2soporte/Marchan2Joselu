@@ -94,12 +94,12 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__LAN__','1' if self.lan else '0').replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
-                if path in ('/app.js','/receipt.js','/style.css','/theme.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js',f'/{args.app}-plus.js',f'/{args.app}-carta.js'):
+                if path in ('/app.js','/receipt.js','/style.css','/theme.css','/mobile.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js',f'/{args.app}-plus.js',f'/{args.app}-carta.js',f'/{args.app}-mobile.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.25'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.26'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/comandero':
@@ -356,7 +356,7 @@ def main(default_app='tpv'):
             except (ValueError,KeyError,TypeError) as error:self.reply(400,{'error':str(error)})
             except Exception:self.reply(500,{'error':'No se pudo guardar. La operación se ha deshecho.'})
 
-    LAN_OPEN={'/','/logo.png','/style.css','/theme.css'}
+    LAN_OPEN={'/','/logo.png','/style.css','/theme.css','/mobile.css'}
 
     class LanHandler(Handler):
         lan=True

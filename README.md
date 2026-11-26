@@ -1,4 +1,4 @@
-# Marchan2 0.25 — JoseluIA
+# Marchan2 0.26 — JoseluIA
 
 Copia de desarrollo **Marchan2Joselu**, creada el 26/10/2026 a partir de [Marchan2Pedro](https://github.com/marchan2soporte/Marchan2Pedro) en la base 0.21. Conserva el historial original; los cambios de esta copia se publican en Marchan2Joselu. Consulta [BASE_PEDRO.md](BASE_PEDRO.md) para el resumen de la revisión.
 
@@ -10,6 +10,18 @@ En Administración → Puntos de venta puedes configurar varios puestos y activa
 En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El papel de 80 mm admite inicialmente 48 columnas; puedes ajustar columnas, líneas de avance y corte por destino. Prueba primero «Sin corte» y después «Corte parcial» solo si el equipo dispone de cortador ESC/POS compatible. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. Los informes X/Z de jornada se abren desde Caja y jornada; usan el destino de impresión de Z del puesto. El antiguo resumen de prueba por fecha se conserva como compatibilidad interna, separado de los cierres nuevos.
 Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y en Windows 10 actualizado); no requiere instalar Python ni conexión a Internet. Si WebView2 no está disponible, la aplicación se abre en el navegador como antes.
+
+## Novedades 0.26 · comandero móvil táctil
+
+- **Comandero móvil rediseñado desde cero** para el teléfono. Se activa solo en pantallas estrechas:
+  - **Mesas**: botones grandes en 3 columnas, en naranja si están ocupadas (rojo si llevan más de 90 min) con importe y tiempo, y aviso ♨ en cocina o ✓ listo. Barra inferior con Venta rápida, Para llevar y Cocina.
+  - **Cuenta**: pestañas **Carta** y **Cuenta**, búsqueda, familias y categorías deslizables, y productos en tarjetas grandes con botón ＋.
+  - **Líneas**: botones − y + para cambiar la cantidad, 📝 nota, ↗ marchar y 🗑 quitar.
+  - **Barra inferior fija**: muestra el total y un único botón principal que cambia según el momento: «Enviar a cocina (n)», «Cobrar» o «Ver cuenta».
+  - **Hojas deslizantes**: formatos, comensales, cobro y la hoja «⋯» con comensales, cliente, servicio, cambiar de mesa, unir, invitar, descuento, ver cuenta, cobrar y cancelar.
+  - Vibración al tocar, se actualiza sola cada 10 s y aprovecha la pantalla completa en móviles con muesca. Se puede «Añadir a pantalla de inicio».
+- **Aviso «Listo para servir»**: cuando cocina o barra marca una comanda como lista, el móvil del camarero que abrió la cuenta muestra un aviso, vibra y suena.
+- **Notas rápidas de preparación** (Administración → Notas de preparación): botones como «SIN CEBOLLA», «POCO HECHO» o «SALSA APARTE» para poner notas con un toque, en el TPV y en el móvil.
 
 ## Novedades 0.25 · carta avanzada, cocina, copias y comandero
 
@@ -112,7 +124,7 @@ Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de dato
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-100 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+101 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
 Fuentes: Python, SQLite, pywebview y HTML/CSS/JS locales. El diseño está en web/theme.css (variables de color, modo oscuro y pantalla de venta).
 Dependencias: python -m pip install -r requirements.txt
 Ejecutar: python tpv.py / python admin.py (añade --browser para usar el navegador o --fullscreen para pantalla completa)

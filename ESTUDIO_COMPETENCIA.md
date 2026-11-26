@@ -1,6 +1,6 @@
 # Estudio de competencia: Ágora, Numier y Qamarero
 
-Fecha: 24/11/2026 · Versión de Marchan2 tras el estudio: 0.25
+Fecha: 24/11/2026 · Versión de Marchan2 tras el estudio: 0.26
 
 Se han revisado las webs públicas de producto de los tres TPV. Son páginas comerciales: describen lo que anuncian, no documentación técnica verificada. El manual de Ágora (agorapos.com/manual) no estaba disponible al consultarlo.
 
@@ -91,6 +91,12 @@ Leyenda: ✅ disponible · 🆕 añadido en 0.24 · ⏳ pendiente · 🚫 fuera 
 - **Comandero móvil** en la red local con emparejamiento por código, móviles revocables y diseño para el teléfono.
 - **VeriFactu (preparación)**: registro de alta encadenado con huella SHA-256 (verificada con el ejemplo publicado por la AEAT) y comprobación de integridad. Sin envío ni homologación.
 - Rediseño del cobro (dos columnas sin scroll), informes, tablas y directorio de administración.
+
+## Qué se ha incorporado en 0.26
+
+- Comandero móvil con interfaz táctil propia (no es la pantalla del TPV encogida).
+- Aviso al camarero cuando cocina marca su comanda como lista (vibración y sonido).
+- Notas rápidas de preparación configurables.
 
 ## Pendiente, por prioridad recomendada
 

@@ -1,5 +1,11 @@
 # Cambios de Marchan2
 
+## 0.26
+- web/tpv-mobile.js y web/mobile.css: interfaz propia de comandero para teléfono (mesas, carta y cuenta con controles táctiles, barra inferior, hojas inferiores, áreas seguras, vibración y refresco automático).
+- Aviso «Listo para servir» en el móvil con vibración y sonido cuando cocina marca la comanda.
+- Notas rápidas de preparación configurables en Administración y usadas en la nota de línea del TPV y del móvil.
+- 101 pruebas Python.
+
 ## 0.25
 - carta.py: tarifas y happy hour, menús con apartados, escandallos con descuento de stock al cobrar, tiempos de cocina y seis informes nuevos (44 disponibles).
 - backup.py: copia diaria automática, al cerrar jornada y manual; carpeta y retención configurables; restauración con copia previa y comprobación de integridad.
