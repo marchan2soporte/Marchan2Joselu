@@ -67,6 +67,8 @@ class WorkflowMixin:
         hospitality.initialize(self)
         import carta
         carta.initialize(self)
+        import verifactu
+        verifactu.initialize(self)
 
     def users(self,active_only=True):
         with self.db() as c:
@@ -145,6 +147,9 @@ class WorkflowMixin:
                     c.execute('UPDATE orders SET series_id=?,series_number=?,series_name=? WHERE id=?',
                               (series['id'],series['next_number'],series['name'],order['id']))
                     c.execute('UPDATE document_series SET next_number=next_number+1 WHERE id=?',(series['id'],))
+        if paid==order['total']:
+            import verifactu
+            verifactu.record_sale(c,order['id'])
         return {'receipt':self.order(c,order['id']),'paid_now':amount,'tip':tip,'change':tendered-amount-tip}
 
     def mutate(self,action,data,actor=None):

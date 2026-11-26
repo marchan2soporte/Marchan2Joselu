@@ -73,3 +73,18 @@ handleClick=async function(b){
   if(b.dataset.backupRestore){backupRestoreDialog(b.dataset.backupRestore);return true}
   return cartaAdminClick(b)};
 $('#modal').addEventListener('close',()=>$('#modal').classList.remove('wide-modal'));
+
+/* ---------- VeriFactu (preparación) ---------- */
+managementRoutes['VeriFactu (preparación)']='verifactu';
+managementGroups['Fiscal']=['VeriFactu (preparación)'];
+CARTA_VIEWS.verifactu='VeriFactu';
+async function adminVerifactu(){$('#main').innerHTML=cartaBack('VeriFactu · preparación','Registro interno de facturación encadenado con huella SHA-256. Todavía NO es un sistema VeriFactu: no envía a la AEAT, no está homologado y los tickets siguen siendo no fiscales.')+empty('Consultando registro…');
+  let d;try{d=await api('verifactu')}catch(e){toast(e.message,true);return}if(view!=='verifactu')return;
+  $('#main').innerHTML=cartaBack('VeriFactu · preparación','Registro interno de facturación encadenado con huella SHA-256. Todavía NO es un sistema VeriFactu: no envía a la AEAT, no está homologado y los tickets siguen siendo no fiscales.')+`<div class="vf-warning">⚠ <b>Uso de pruebas.</b> No imprimas la leyenda «VERI*FACTU» ni el QR tributario en los tickets hasta completar la integración y la declaración responsable. Este registro sirve para validar NIF, numeración, cuotas y la integridad de la cadena.</div>
+  <div class="vf-grid"><section class="panel vf-card"><span class="eyebrow">ESTADO</span><h3>${d.enabled?'Registro activado':'Registro desactivado'}</h3><p>${d.nif?'NIF del emisor: <b>'+esc(d.nif)+'</b>':'Falta el NIF en Administración → Empresa. Sin NIF no se generan registros.'}</p><button class="button ${d.enabled?'secondary':'primary'}" id="vf-toggle">${d.enabled?'Desactivar registro':'Activar registro de pruebas'}</button></section>
+  <section class="panel vf-card"><span class="eyebrow">CADENA DE HUELLAS</span><h3>${d.chain.ok?'✓ Íntegra':'✗ Rota en el registro #'+d.chain.broken_at}</h3><p>${d.count} registros de alta. ${d.chain.ok?'Cada huella coincide con sus datos y con la anterior.':esc(d.chain.reason)}</p></section>
+  <section class="panel vf-card"><span class="eyebrow">PENDIENTE PARA PRODUCCIÓN</span><ul>${d.pending.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></section></div>
+  <section class="panel"><table class="admin-table"><thead><tr><th>#</th><th>Factura</th><th>Fecha</th><th>Base / cuota</th><th>Total</th><th>Huella</th><th></th></tr></thead><tbody>${d.records.map(r=>`<tr><td>${r.id}</td><td><strong>${esc(r.invoice_number)}</strong><br><small class="muted">Cuenta #${r.order_id} · ${esc(r.invoice_type)}</small></td><td>${esc(r.issue_date)}</td><td>${r.breakdown.map(b=>`${b.rate}%: ${euro(b.base)} + ${euro(b.tax)}`).join('<br>')}</td><td><b>${euro(r.total)}</b></td><td><code class="vf-hash" title="Anterior: ${esc(r.previous_hash||'(primer registro)')}">${esc(r.hash.slice(0,16))}…</code></td><td><a class="button secondary" href="${esc(r.qr_test_url)}" target="_blank" rel="noopener" title="URL de cotejo del entorno de PRUEBAS de la AEAT">QR pruebas</a></td></tr>`).join('')||`<tr><td colspan="7">${empty('Sin registros','Activa el registro y cobra una cuenta en el TPV.')}</td></tr>`}</tbody></table></section>`;
+  $('#vf-toggle').onclick=async()=>{try{await api('verifactu_toggle',{enabled:!d.enabled});toast(d.enabled?'Registro desactivado':'Registro de pruebas activado');adminVerifactu()}catch(e){toast(e.message,true)}}}
+const vfRenderView=renderView;
+renderView=function(){if(view==='verifactu'){$('#heading').innerHTML='VeriFactu<span>.</span>';return adminVerifactu()}vfRenderView()};

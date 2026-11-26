@@ -19,6 +19,7 @@ import line_pricing
 import hospitality
 import carta
 import backup
+import verifactu
 import json
 import os
 from pathlib import Path
@@ -95,6 +96,9 @@ def main(default_app='tpv'):
                     return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.24'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
+                if path=='/api/verifactu':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,verifactu.status(store))
                 if path=='/api/backups':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,dict(config=backup.config(store),items=backup.listing(store)))
@@ -232,6 +236,9 @@ def main(default_app='tpv'):
                         try:result['backup']=backup.create(store,'cierre')['name']
                         except Exception:result['backup_warning']='No se pudo crear la copia de seguridad del cierre. Revisa la carpeta de copias.'
                     return self.reply(200,result)
+                if action=='verifactu_toggle':
+                    if args.app!='admin' or user['role']!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,verifactu.set_enabled(store,data.get('enabled') is True))
                 if action in ('backup_create','backup_restore','backup_config'):
                     if args.app!='admin' or user['role']!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     if action=='backup_create':return self.reply(200,backup.create(store,'manual'))

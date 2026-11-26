@@ -557,3 +557,80 @@ dialog.wide-modal { width: 880px; }
 .recipe-row { display: grid; grid-template-columns: 1fr 130px 48px; gap: 8px; }
 .recipe-items { font-size: 12px; max-width: 360px; }
 .backup-config { padding: 18px; margin-bottom: 14px; }
+
+/* =====================================================================
+   0.25 · Rediseño de cobro, caja, informes y configuración
+   ===================================================================== */
+
+/* Cobro en efectivo y otros diálogos con teclado: dos columnas sin scroll */
+dialog:has(#tendered), dialog:has(#split-value), dialog:has(#cash-opening), dialog:has(.denomination-grid) { width: 900px; }
+#modal-content:has(#tendered), #modal-content:has(#split-value) { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; row-gap: 10px; align-items: start; }
+#modal-content:has(#tendered) > *, #modal-content:has(#split-value) > * { grid-column: 1; margin: 0; }
+#modal-content:has(#tendered) > .modal-title, #modal-content:has(#split-value) > .modal-title,
+#modal-content:has(#tendered) > .form-actions, #modal-content:has(#split-value) > .form-actions,
+#modal-content:has(#tendered) > .inline-error, #modal-content:has(#split-value) > .inline-error { grid-column: 1 / -1; }
+#modal-content:has(#tendered) > .number-pad, #modal-content:has(#split-value) > .number-pad { grid-column: 2; grid-row: 2 / span 6; margin: 0; }
+#modal-content:has(#tendered) .number-pad button, #modal-content:has(#split-value) .number-pad button { min-height: 66px; font-size: 26px; }
+.pay-total { font-size: 54px; font-weight: 800; letter-spacing: -2px; text-align: center; padding: 14px; border-radius: 18px; background: var(--surface-2); font-variant-numeric: tabular-nums; }
+#tendered, #split-value { font-size: 26px; font-weight: 800; min-height: 58px; text-align: right; font-variant-numeric: tabular-nums; }
+.cash-presets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.cash-presets .pill { min-height: 52px; font-size: 16px; font-weight: 800; border-radius: 14px; }
+.split-note { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 16px; background: color-mix(in srgb, var(--mint) 35%, var(--surface)); color: var(--ink); }
+.split-note strong { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+#confirm-pay { min-height: 58px; font-size: 17px; flex: 1; }
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
+
+/* Menú de pagos */
+.payment-menu { gap: 14px; }
+.payment-choice { min-height: 140px; box-shadow: var(--shadow); }
+.payment-choice > b { font-size: 36px; }
+
+/* Caja: recuento por denominaciones y resúmenes */
+.denomination-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.denomination-grid label { padding: 8px 10px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.cash-summary, .cash-receipt { border-radius: 16px; background: var(--surface-2); padding: 14px 16px; }
+.cash-difference { font-weight: 800; }
+
+/* Informes y directorio de administración */
+.insight-hero, .global-hero, .series-hero, .templates-hero { border-radius: 22px !important; }
+.directory-grid { gap: 12px !important; }
+.directory-tile { border-radius: 18px !important; transition: transform .12s, box-shadow .12s, border-color .12s; }
+.directory-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 26px #0f1f2318; border-color: var(--green) !important; }
+.directory-section h2 { font-size: 15px; letter-spacing: .3px; margin: 22px 0 10px; color: var(--muted); text-transform: uppercase; }
+.status-pill { border-radius: 999px !important; font-weight: 800; letter-spacing: .6px; }
+.status-pill.ready { background: color-mix(in srgb, var(--green) 14%, var(--surface)) !important; color: var(--green) !important; }
+.status-pill.planned { background: color-mix(in srgb, #d4a72c 18%, var(--surface)) !important; color: #8a6510 !important; }
+:root[data-theme="dark"] .status-pill.planned { color: #f2cf73 !important; }
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table thead th { position: sticky; top: 0; background: var(--surface-2); color: var(--muted); font-size: 11px; letter-spacing: .6px; text-transform: uppercase; text-align: left; padding: 12px 14px; z-index: 1; }
+.admin-table td { padding: 12px 14px; border-top: 1px solid var(--line); vertical-align: middle; }
+.admin-table tbody tr:hover td { background: color-mix(in srgb, var(--green) 4%, var(--surface)); }
+.report-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.report-controls input, .report-controls select { min-height: 46px; }
+.report-note { padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, #3b82c4 10%, var(--surface)); border: 1px solid color-mix(in srgb, #3b82c4 25%, var(--line)); color: var(--ink); font-size: 12px; margin-bottom: 12px; }
+.section-title h2 { font-size: 24px; font-weight: 750; letter-spacing: -.5px; }
+.section-title p { color: var(--muted); margin-top: 6px; max-width: 880px; line-height: 1.5; }
+
+/* Formularios de configuración */
+.form-grid { gap: 14px; }
+fieldset { border-color: var(--line); border-radius: 14px; }
+input[type="checkbox"] { accent-color: var(--green); }
+.calculator-switch { padding: 10px 14px; border-radius: 14px; background: var(--surface-2); }
+
+/* Ajuste de altura del cobro */
+dialog:has(#tendered) { padding: 20px 24px; max-height: 94vh; }
+dialog:has(#tendered) .pay-total { font-size: 44px; padding: 8px; }
+dialog:has(#tendered) .cash-presets .pill { min-height: 44px; }
+dialog:has(#tendered) .split-note strong { font-size: 26px; }
+dialog:has(#tendered) .split-note { padding: 8px 14px; }
+dialog:has(#tendered) .form-actions { margin-top: 4px; }
+dialog:has(#tendered) .modal-title { margin-bottom: 0; }
+
+/* VeriFactu */
+.vf-warning { padding: 14px 16px; border-radius: 16px; margin-bottom: 14px; background: var(--danger-bg); color: var(--danger); font-size: 13px; line-height: 1.5; }
+.vf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.vf-card { padding: 18px; display: grid; gap: 8px; align-content: start; }
+.vf-card h3 { font-size: 18px; }
+.vf-card p, .vf-card li { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.vf-card ul { margin: 0; padding-left: 18px; }
+.vf-hash { font-size: 11px; background: var(--surface-2); padding: 3px 6px; border-radius: 6px; }
