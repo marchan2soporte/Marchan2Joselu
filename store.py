@@ -132,8 +132,12 @@ class LegacyStore:
                 from pos_profiles import active_options
                 auto_prepare=active_options(c)['auto_prepare']
                 self.require_open(c,data['order_id'])
-                row=c.execute('SELECT f.*,p.name product_name,p.tax,p.prep,p.course,p.addon_group,p.weighed FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1',(data['format_id'],)).fetchone()
+                row=c.execute('SELECT f.*,p.name product_name,p.tax,p.prep,p.course,p.addon_group,p.weighed,p.category_id,p.menu_sections FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1',(data['format_id'],)).fetchone()
                 if not row:raise ValueError('El formato ya no está disponible.')
+                if row['menu_sections']!='[]':raise ValueError('Este producto es un menú: elige sus platos.')
+                import carta
+                tariff_price,tariff_name=carta.apply_tariff(c,data['order_id'],row['category_id'],row['price'])
+                row=dict(row);row['catalog_price']=row['price'];row['price']=tariff_price
                 qty=int(data.get('qty',1))
                 if qty<1 or qty>100:raise ValueError('Cantidad entre 1 y 100.')
                 grams=None
@@ -159,7 +163,8 @@ class LegacyStore:
                     c.execute('UPDATE lines SET qty=qty+? WHERE id=?',(qty,same['id']))
                     return {'line_id':same['id']}
                 lid=c.execute('INSERT INTO lines(order_id,product_id,format_id,name,format,price,qty,tax,extras,note,prep,course,kitchen,base_price,reference_price,is_weighed,weight_milli) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                          (data['order_id'],row['product_id'],row['id'],row['product_name'],row['name'],price,qty,row['tax'],extra_json,note,row['prep'],row['course'],'pending' if auto_prepare else 'new',price,row['price'],int(bool(row['weighed'])),grams)).lastrowid
+                          (data['order_id'],row['product_id'],row['id'],row['product_name'],row['name'],price,qty,row['tax'],extra_json,note,row['prep'],row['course'],'pending' if auto_prepare else 'new',price,row['catalog_price'],int(bool(row['weighed'])),grams)).lastrowid
+                if tariff_name:c.execute('UPDATE lines SET tariff=? WHERE id=?',(tariff_name,lid))
                 if auto_prepare:
                     from printing import enqueue_kitchen
                     enqueue_kitchen(c,self,data['order_id'],[lid])
@@ -167,6 +172,8 @@ class LegacyStore:
             elif action=='quantity':
                 row=c.execute('SELECT * FROM lines WHERE id=?',(data['line_id'],)).fetchone()
                 if not row:raise ValueError('La línea no existe.')
+                import carta
+                carta.guard_line(c,row['id'],'quantity')
                 order=self.require_open(c,row['order_id'])
                 if order['paid']:raise ValueError('La cuenta tiene pagos parciales. No se pueden retirar productos.')
                 if row['kitchen']!='new':raise ValueError('La línea ya se envió a preparación. Esta versión no permite anular comandas enviadas.')

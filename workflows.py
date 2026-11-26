@@ -65,6 +65,8 @@ class WorkflowMixin:
         line_pricing.initialize(self)
         import hospitality
         hospitality.initialize(self)
+        import carta
+        carta.initialize(self)
 
     def users(self,active_only=True):
         with self.db() as c:
@@ -133,6 +135,8 @@ class WorkflowMixin:
         if paid==order['total']:
             methods={r[0] for r in c.execute('SELECT method FROM payments WHERE order_id=?',(order['id'],))}
             c.execute("UPDATE orders SET status='paid',paid_at=?,payment=?,total=?,tendered=?,change_due=? WHERE id=?",(now,method if len(methods)==1 else 'mixed',order['total'],tendered,tendered-amount-tip,order['id']))
+            import carta
+            carta.consume(c,order['id'],actor)
             settings=c.execute("SELECT value FROM settings WHERE key='global_config'").fetchone()
             selected=json.loads(settings['value']).get('pos_series',{}).get('Fra. Simp.') if settings else None
             if selected:
@@ -188,6 +192,10 @@ class WorkflowMixin:
                 line_id=int(data['line_id'])
                 target=next((row for row in order['lines'] if row['id']==line_id),None)
                 if not target:raise ValueError('La línea no pertenece a esta cuenta.')
+                import carta
+                carta.guard_line(c,line_id,'cancel')
+                children=carta.menu_children(c,line_id) if target.get('menu_role')=='parent' else []
+                if children:target=dict(target,kitchen='new' if all(ch['kitchen']=='new' for ch in children) else 'pending')
                 settings=c.execute("SELECT value FROM settings WHERE key='global_config'").fetchone()
                 prefs=json.loads(settings['value']).get('preferences',{}) if settings else {}
                 reason=str(data.get('reason','')).strip()
@@ -196,6 +204,7 @@ class WorkflowMixin:
                 if len(reason)>300:raise ValueError('El motivo es demasiado largo.')
                 c.execute('INSERT INTO line_cancellations(order_id,line_id,name,qty,reason,user_id,created) VALUES(?,?,?,?,?,?,?)',
                           (order['id'],line_id,target['name'],target['qty'],reason,actor,datetime.now().isoformat(timespec='seconds')))
+                c.execute('DELETE FROM lines WHERE menu_parent_id=?',(line_id,))
                 c.execute('DELETE FROM lines WHERE id=?',(line_id,))
                 return {'ok':True}
             if action=='pay':
@@ -208,6 +217,7 @@ class WorkflowMixin:
                 wanted={int(r['id']):int(r['qty']) for r in selected}
                 if len(wanted)!=len(selected):raise ValueError('Hay líneas repetidas.')
                 originals={r['id']:r for r in order['lines']}
+                if any(originals.get(i,{}).get('menu_role') for i in wanted):raise ValueError('Los menús se cobran con la cuenta completa o dividiendo por importe.')
                 if any(i not in originals or q<1 or q>originals[i]['qty'] for i,q in wanted.items()):raise ValueError('Revisa las cantidades seleccionadas.')
                 amount=sum(originals[i]['price']*q for i,q in wanted.items())
                 if amount!=int(data['expected_amount']):raise ValueError('El importe seleccionado ha cambiado.')

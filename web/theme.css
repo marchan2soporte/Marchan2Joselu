@@ -496,3 +496,64 @@ dialog::backdrop { background: #061012a6; backdrop-filter: blur(6px); }
 .tpv-mode .floor-plan .table-meta .who { display: none; }
 .tpv-mode .floor-plan .table-card small { display: none; }
 .tpv-mode .floor-plan .table-card::after { top: 6px; right: 8px; }
+
+/* =====================================================================
+   0.25 · Menús, tarifas, monitor de cocina y copias de seguridad
+   ===================================================================== */
+.tariff-live { color: #8a6510; background: color-mix(in srgb, #d4a72c 22%, var(--surface)); padding: 3px 10px; border-radius: 999px; font-weight: 800; letter-spacing: .5px; }
+:root[data-theme="dark"] .tariff-live { color: #f2cf73; }
+.tariff-tag { display: inline-block; width: fit-content; font-size: 9px !important; font-weight: 800; color: #8a6510 !important; background: color-mix(in srgb, #d4a72c 18%, var(--surface)); padding: 1px 6px; border-radius: 6px; }
+.menu-badge { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: #fff; background: var(--tile); padding: 2px 7px; border-radius: 6px; }
+.service-line.menu-parent .line-qty { background: var(--ink); color: var(--bg); }
+.service-line.menu-item { min-height: 0 !important; padding: 4px 6px 4px 28px !important; border-bottom-style: dashed; }
+.service-line.menu-item .line-qty { width: 22px; min-width: 22px; height: 22px; font-size: 11px; }
+.service-line.menu-item .line-info strong { font-size: 12px; font-weight: 650; }
+.service-line.menu-item > b { color: var(--muted); font-size: 11px; }
+
+/* Selector de menú */
+.menu-scroll { max-height: 60vh; overflow: auto; padding-right: 4px; }
+.menu-section { margin-bottom: 14px; }
+.menu-section h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; letter-spacing: .5px; }
+.step-dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); font-size: 12px; font-weight: 800; }
+.step-dot.done { background: var(--green); color: var(--green-ink); }
+.menu-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.menu-option { --tile: var(--green); min-height: 64px; padding: 10px 12px; border-radius: 14px; text-align: left; display: grid; gap: 4px; align-content: start; background: color-mix(in srgb, var(--tile) 8%, var(--surface)); border: 2px solid color-mix(in srgb, var(--tile) 25%, var(--line)); color: var(--ink); }
+.menu-option strong { font-size: 13px; }
+.menu-option.active { border-color: var(--tile); background: color-mix(in srgb, var(--tile) 22%, var(--surface)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tile) 25%, transparent); }
+dialog.wide-modal { width: 880px; }
+
+/* Monitor de cocina */
+.kds-stats { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+.kds-stats b { color: var(--ink); font-size: 16px; }
+.kitchen-grid.kds { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; align-items: start; }
+.kds .kitchen-card { border-top: 6px solid var(--green); display: flex; flex-direction: column; overflow: hidden; }
+.kds .kitchen-card.warn { border-top-color: #e0a43a; }
+.kds .kitchen-card.late { border-top-color: #d0533f; animation: late-pulse 2s infinite; }
+@keyframes late-pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, #d0533f 35%, transparent); } }
+.kds .kitchen-top { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 4px; }
+.kds-timer { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; padding: 2px 10px; border-radius: 10px; background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green); }
+.warn .kds-timer { background: color-mix(in srgb, #e0a43a 20%, var(--surface)); color: #a26a12; }
+.late .kds-timer { background: #d0533f; color: #fff; }
+.kds-meta { padding: 0 14px 8px; font-size: 11px; color: var(--muted); }
+.kds .kitchen-body { padding: 0 14px; display: grid; gap: 8px; }
+.kds .kitchen-body article { padding: 8px 10px; border-radius: 10px; background: var(--surface-2); display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+.kds .kitchen-body article strong { font-size: 16px; color: var(--ink); }
+.kds .kitchen-body article.from-menu { border-left: 4px solid var(--ink); }
+.kds-note { color: var(--danger) !important; }
+.kds .kitchen-card > .button { margin: 12px 14px 14px; min-height: 52px; font-size: 15px; }
+
+/* Administración: menús, escandallos, copias */
+.menu-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.menu-card { padding: 16px; display: grid; gap: 10px; }
+.menu-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.menu-card-head small { display: block; color: var(--muted); margin-top: 3px; }
+.menu-card-section { display: grid; gap: 2px; font-size: 12px; }
+.menu-card-section b { font-size: 11px; letter-spacing: 1px; color: var(--green); }
+.menu-card-section span { color: var(--muted); }
+.menu-edit-section { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+.menu-edit-head { display: grid; grid-template-columns: 1fr 160px auto; gap: 8px; margin-bottom: 10px; }
+.menu-dish-picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 180px; overflow: auto; }
+.recipe-rows { display: grid; gap: 8px; margin: 12px 0; }
+.recipe-row { display: grid; grid-template-columns: 1fr 130px 48px; gap: 8px; }
+.recipe-items { font-size: 12px; max-width: 360px; }
+.backup-config { padding: 18px; margin-bottom: 14px; }

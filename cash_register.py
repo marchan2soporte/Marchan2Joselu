@@ -185,7 +185,7 @@ def cancel_ticket(store,c,order,data,actor):
     session=require_open(c)
     _actor(c,actor,'ticket_void')
     if order['payments']:raise ValueError('La cuenta tiene pagos. No se puede cancelar; necesita una devolución.')
-    if any(l['kitchen']!='new' for l in order['lines']):_actor(c,actor,'ticket_cancel_prepared')
+    if any(l['kitchen']!='new' and l.get('menu_role')!='parent' for l in order['lines']):_actor(c,actor,'ticket_cancel_prepared')
     reason=str(data.get('reason','')).strip()
     if not 3<=len(reason)<=300:raise ValueError('Indica un motivo de cancelación entre 3 y 300 caracteres.')
     c.execute('INSERT INTO ticket_cancellations(order_id,session_id,total,reason,created,user_id,snapshot) VALUES(?,?,?,?,?,?,?)',(order['id'],session['id'],order['total'],reason,datetime.now().isoformat(timespec='seconds'),actor,json.dumps(order,ensure_ascii=False)))

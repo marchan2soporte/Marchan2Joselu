@@ -22,6 +22,8 @@ LIVE.update(INVENTORY_REPORTS)
 LIVE.update({'Movimientos de caja','Diario de cierres de caja'})
 from hospitality import REPORTS as HOSPITALITY_REPORTS
 LIVE.update(HOSPITALITY_REPORTS)
+from carta import REPORTS as CARTA_REPORTS
+LIVE.update(CARTA_REPORTS)
 DEPENDENCIES={'Visión del negocio':'compras, existencias y costes de adquisición','Locales':'locales y periodos de servicio vinculados a cada operación','Evolución':'reservas, invitaciones o integración fiscal, según el informe','Carta y rentabilidad':'costes históricos, menús, promociones o alérgenos vinculados a los productos','Equipo':'descuentos, cancelaciones y periodos de servicio','Espacios':'número de comensales registrado en cada cuenta','Cobros y caja':'tarifas, movimientos de caja y propinas','Servicios':'periodos de servicio vinculados a cada operación','Clientes':'clientes vinculados a ventas y documentos','Almacén':'recepciones, compras y movimientos de existencias','Cocina':'marcas de tiempo de envío y finalización de cada línea','Diarios':'documentos y cierres de caja'}
 
 def report_catalog():
@@ -65,6 +67,9 @@ def report(store,name,start,end):
  if name in INVENTORY_REPORTS:
   import inventory
   return inventory.report(store,name,start,end)
+ if name in CARTA_REPORTS:
+  import carta
+  return dict(**entry,**carta.report(store,name,start,end),start=start,end=end)
  if name in HOSPITALITY_REPORTS:
   import hospitality
   return dict(**entry,**hospitality.report(store,name,start,end),start=start,end=end)

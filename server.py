@@ -17,6 +17,8 @@ import cash_register
 import button_layout
 import line_pricing
 import hospitality
+import carta
+import backup
 import json
 import os
 from pathlib import Path
@@ -85,7 +87,7 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
-                if path in ('/app.js','/receipt.js','/style.css','/theme.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js',f'/{args.app}-plus.js'):
+                if path in ('/app.js','/receipt.js','/style.css','/theme.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js',f'/{args.app}-plus.js',f'/{args.app}-carta.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
@@ -93,6 +95,9 @@ def main(default_app='tpv'):
                     return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.24'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
+                if path=='/api/backups':
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,dict(config=backup.config(store),items=backup.listing(store)))
                 if path=='/api/company':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,company.read(store))
@@ -135,6 +140,7 @@ def main(default_app='tpv'):
                     with store.db() as c:data['permissions']=permissions.rights(c,user['id'])
                     data['cash_session']=cash_register.status(store)
                     hospitality.extend_state(store,data,user['id'])
+                    carta.extend_state(store,data)
                     data['button_layout']=button_layout.read(store)
                     data['ticket_template']=ticket_templates.current(store)
                     profile_template=data['pos_profile']['options']['receipt_template_id'] if data['pos_profile'] else None
@@ -209,6 +215,8 @@ def main(default_app='tpv'):
                     return self.reply(200,{'ok':True})
                 user=self.user()
                 if not user:return self.reply(401,{'error':'La sesión ha terminado. Entra con tu usuario.'})
+                if action in carta.TPV_ACTIONS|carta.ADMIN_ACTIONS:
+                    return self.reply(200,carta.mutate(store,action,data,user['id'],args.app))
                 if action in hospitality.TPV_ACTIONS|hospitality.ADMIN_ACTIONS:
                     return self.reply(200,hospitality.mutate(store,action,data,user['id'],args.app))
                 if action in ('line_discount','line_weight'):
@@ -219,7 +227,16 @@ def main(default_app='tpv'):
                     return self.reply(200,button_layout.save(store,data,user['id']))
                 if action in ('cash_open','cash_move','cash_close'):
                     if args.app!='tpv':return self.reply(403,{'error':'Las operaciones de caja se realizan desde el TPV.'})
-                    return self.reply(200,cash_register.mutate(store,action,data,user['id']))
+                    result=cash_register.mutate(store,action,data,user['id'])
+                    if action=='cash_close':
+                        try:result['backup']=backup.create(store,'cierre')['name']
+                        except Exception:result['backup_warning']='No se pudo crear la copia de seguridad del cierre. Revisa la carpeta de copias.'
+                    return self.reply(200,result)
+                if action in ('backup_create','backup_restore','backup_config'):
+                    if args.app!='admin' or user['role']!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    if action=='backup_create':return self.reply(200,backup.create(store,'manual'))
+                    if action=='backup_restore':return self.reply(200,backup.restore(store,data.get('name')))
+                    return self.reply(200,backup.save_config(store,data))
                 if action=='company':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,company.save(store,data))
@@ -298,11 +315,12 @@ def main(default_app='tpv'):
                     if needed:permissions.require(store,user['id'],needed)
                     if action=='cancel_line':
                         with store.db() as c:
-                            row=c.execute('SELECT kitchen FROM lines WHERE id=?',(data.get('line_id'),)).fetchone()
-                        if row and row['kitchen']!='new':permissions.require(store,user['id'],'ticket_cancel_prepared')
+                            row=c.execute('SELECT kitchen,menu_role FROM lines WHERE id=?',(data.get('line_id'),)).fetchone()
+                            prepared=bool(row) and (c.execute("SELECT 1 FROM lines WHERE menu_parent_id=? AND kitchen<>'new'",(data.get('line_id'),)).fetchone() is not None if row['menu_role']=='parent' else row['kitchen']!='new')
+                        if prepared:permissions.require(store,user['id'],'ticket_cancel_prepared')
                     if action=='cancel_ticket':
                         with store.db() as c:
-                            if c.execute("SELECT 1 FROM lines WHERE order_id=? AND kitchen<>'new'",(data.get('order_id'),)).fetchone():permissions.require(store,user['id'],'ticket_cancel_prepared')
+                            if c.execute("SELECT 1 FROM lines WHERE order_id=? AND kitchen<>'new' AND COALESCE(menu_role,'')<>'parent'",(data.get('order_id'),)).fetchone():permissions.require(store,user['id'],'ticket_cancel_prepared')
                 result=store.mutate(action,data,actor=user['id'])
                 if args.app=='tpv':
                     if action in ('pay','split_pay') and result.get('receipt',{}).get('status')=='paid':
@@ -315,6 +333,7 @@ def main(default_app='tpv'):
             except Exception:self.reply(500,{'error':'No se pudo guardar. La operación se ha deshecho.'})
 
     server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
+    backup.start_scheduler(store,threading.Event())
     url=f'http://127.0.0.1:{server.server_port}'
     (folder/f'session-{args.app}.json').write_text(json.dumps({'url':url,'pid':os.getpid(),'app':args.app}),encoding='utf8')
     print('Marchan2 '+args.app+' · '+url,flush=True)
