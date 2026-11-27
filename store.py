@@ -132,9 +132,10 @@ class LegacyStore:
                 from pos_profiles import active_options
                 auto_prepare=active_options(c)['auto_prepare']
                 self.require_open(c,data['order_id'])
-                row=c.execute('SELECT f.*,p.name product_name,p.tax,p.prep,p.course,p.addon_group,p.weighed,p.category_id,p.menu_sections FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1',(data['format_id'],)).fetchone()
+                row=c.execute('SELECT f.*,p.name product_name,p.tax,p.prep,p.course,p.addon_group,p.weighed,p.category_id,p.menu_sections,p.sold_out FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1',(data['format_id'],)).fetchone()
                 if not row:raise ValueError('El formato ya no está disponible.')
                 if row['menu_sections']!='[]':raise ValueError('Este producto es un menú: elige sus platos.')
+                if row['sold_out']:raise ValueError(row['product_name']+' está AGOTADO.')
                 import carta
                 tariff_price,tariff_name=carta.apply_tariff(c,data['order_id'],row['category_id'],row['price'])
                 row=dict(row);row['catalog_price']=row['price'];row['price']=tariff_price
@@ -211,7 +212,8 @@ class LegacyStore:
                 if not c.execute('SELECT 1 FROM categories WHERE id=?',(cat,)).fetchone():raise ValueError('Selecciona una categoría.')
                 tax=int(data.get('tax',10));prep=data.get('prep','COCINA');course=data.get('course','PRIMERO');group=data.get('addon_group','')
                 if tax not in (0,4,10,21):raise ValueError('Selecciona un IVA válido.')
-                if prep not in ('BARRA','COCINA') or course not in ('PRIMERO','SEGUNDO','TERCEROS','BEBIDAS','POSTRES'):raise ValueError('Preparación no válida.')
+                import kitchen
+                if prep not in kitchen.prep_names(c) or course not in ('PRIMERO','SEGUNDO','TERCEROS','BEBIDAS','POSTRES'):raise ValueError('Preparación no válida.')
                 if group and not c.execute('SELECT 1 FROM extras WHERE group_name=?',(group,)).fetchone():raise ValueError('El grupo de añadidos no existe.')
                 existing_weight=c.execute('SELECT weighed FROM products WHERE id=?',(data.get('id'),)).fetchone()
                 weighed=data.get('weighed',bool(existing_weight[0]) if existing_weight else False)

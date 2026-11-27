@@ -183,3 +183,19 @@ body.m-app button:active:not(:disabled) { transform: scale(.96); }
 /* Pide la cuenta */
 .m-table.busy.billing { background: linear-gradient(160deg, #3b82c4, #24609b); }
 .m-dot.bill { background: #fff; }
+
+/* 0.28 · Plano de mesas en el móvil */
+.m-seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-3); margin: 0 0 10px; }
+.m-seg button { flex: 1; min-height: 40px; border-radius: 10px; font-weight: 800; color: var(--muted); }
+.m-seg button.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.m-hint { color: var(--muted); font-size: 13px; margin: 0 4px 10px; }
+.m-table-grid.m-plan { display: block; position: relative; width: 100%; aspect-ratio: 3 / 4; border-radius: 22px; border: 1px dashed var(--line); background-color: var(--surface-2);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--muted) 28%, transparent) 1px, transparent 1.5px); background-size: 18px 18px; }
+.m-plan .m-table { position: absolute; width: 22%; min-height: 0; height: 16%; padding: 6px; border-radius: 14px; gap: 0; justify-content: center; }
+.m-plan .m-table.shape-round { border-radius: 50%; align-items: center; text-align: center; }
+.m-plan .m-table.shape-long { width: 32%; }
+.m-plan .m-table-name { font-size: 15px; }
+.m-plan .m-table-total { font-size: 12px; }
+.m-plan .m-table-meta, .m-plan .m-table-free { display: none; }
+.m-plan .m-dot { width: 20px; height: 20px; top: 2px; right: 2px; font-size: 10px; }
+@media (min-width: 500px) { .m-table-grid.m-plan { aspect-ratio: 4 / 3; } }

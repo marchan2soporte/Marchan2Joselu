@@ -1,5 +1,16 @@
 # Cambios de Marchan2
 
+## 0.28
+- Marchan2_Servidor.exe y server.cfg (servidor de red, modo cliente para otros TPV, ventana de estado).
+- Emparejamiento del móvil persistente (cookie) y sesión guardada en el dispositivo; manifiesto web.
+- Plano de mesas en el móvil.
+- Cierre de jornada con cuentas abiertas: cobrarlas (lista de pendientes) o dejarlas para la siguiente jornada (en el Z).
+- Pregunta de impresión al cobrar y salida a mesas.
+- Monitores de cocina como app web independiente (/cocina) con disposición, volumen, sonido, listo por plato y recuperar; la vista de preparación sale del TPV.
+- Tipos de preparación editables y monitores configurables en Administración.
+- Productos agotados.
+- 111 pruebas Python.
+
 ## 0.27
 - ticket_print.py: maqueta común de documentos, salida de texto, ESC/POS (alineación, negrita, doble tamaño, logotipo PNG en trama, corte) y GDI con fuente monoespaciada ajustada al papel; imagen PNG de vista previa con el mismo código de dibujo.
 - Plantillas: alineación de cabecera y pie, nombre y total grandes, separador y logotipo impreso; vista «Impresión exacta» y «Ver cuenta» con la imagen real.

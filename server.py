@@ -21,6 +21,8 @@ import carta
 import backup
 import verifactu
 import comandero
+import kitchen
+import server_config
 import json
 import os
 from pathlib import Path
@@ -42,7 +44,7 @@ def main(default_app='tpv'):
     parser=argparse.ArgumentParser()
     parser.add_argument('--port',type=int,default=0)
     parser.add_argument('--data')
-    parser.add_argument('--app',choices=['tpv','admin'],default=default_app)
+    parser.add_argument('--app',choices=['tpv','admin','servidor'],default=default_app)
     parser.add_argument('--no-browser',action='store_true',help='Solo servidor, sin ventana (pruebas).')
     parser.add_argument('--browser',action='store_true',help='Abrir en el navegador en lugar de la ventana de escritorio.')
     parser.add_argument('--lan-host',default='0.0.0.0',help=argparse.SUPPRESS)
@@ -50,6 +52,17 @@ def main(default_app='tpv'):
     args=parser.parse_args()
     folder=Path(args.data) if args.data else Path(os.environ.get('LOCALAPPDATA',str(Path.home())))/'Marchan2'
     folder.mkdir(parents=True,exist_ok=True)
+    args.servidor=args.app=='servidor'
+    if args.servidor:
+        args.app='tpv';server_config.ensure(folder)
+    elif not args.no_browser and server_config.client_url(folder):
+        # Equipo cliente: abre el TPV del servidor indicado en server.cfg, sin base de datos local.
+        remote=server_config.client_url(folder)
+        if args.app=='tpv':
+            if desktop.open_remote(remote,'Marchan2 · TPV · '+remote,folder/'webview',fullscreen=args.fullscreen,log=folder/'desktop.log'):return
+            webbrowser.open(remote);return
+        desktop.message('Marchan2 · Administración',f'Este equipo está configurado como cliente de {remote} en {server_config.path(folder)}. La Administración se abre en el equipo servidor.')
+        return
     store=Store(folder/'marchan2.db')
     inventory.initialize(store)
     series.initialize(store)
@@ -61,14 +74,18 @@ def main(default_app='tpv'):
 
     comandero.initialize(store)
     lan={'port':None}
+    if args.servidor:
+        current=comandero.status(store)
+        comandero.configure(store,{'enabled':True,'port':server_config.read(folder)['port'],'allow_pay':current['allow_pay']})
 
     class Handler(BaseHTTPRequestHandler):
         lan=False
         def log_message(self,*values):pass
 
-        def reply(self,status,value,kind='application/json; charset=utf-8'):
+        def reply(self,status,value,kind='application/json; charset=utf-8',headers=None):
             body=json.dumps(value,ensure_ascii=False).encode() if not isinstance(value,bytes) else value
             self.send_response(status)
+            for name,content in (headers or {}).items():self.send_header(name,content)
             self.send_header('Content-Type',kind)
             self.send_header('Content-Length',str(len(body)))
             self.send_header('Cache-Control','no-store')
@@ -94,12 +111,29 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__LAN__','1' if self.lan else '0').replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
+                if path=='/servidor' and args.servidor and not self.lan:
+                    return self.reply(200,(assets/'servidor.html').read_bytes(),'text/html; charset=utf-8')
+                if path=='/api/server_status' and args.servidor and not self.lan:
+                    with store.db() as c:monitors=kitchen.monitors(c)
+                    return self.reply(200,dict(comandero.status(store,lan['port']),monitors=monitors,config=str(server_config.path(folder)),cfg=server_config.read(folder),folder=str(folder)))
+                if path=='/manifest.webmanifest':
+                    return self.reply(200,{'name':'Marchan2 Comandero','short_name':'Marchan2','start_url':'/','display':'standalone','background_color':'#0E1A1C','theme_color':'#0E1A1C','icons':[{'src':'/logo.png','sizes':'192x192','type':'image/png'}]},'application/manifest+json')
+                if path=='/cocina':
+                    html=(assets/'kds.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__LAN__','1' if self.lan else '0')
+                    return self.reply(200,html.encode(),'text/html; charset=utf-8')
+                if path in ('/kds.js','/kds.css'):
+                    return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
+                if path=='/api/kds/monitors':
+                    with store.db() as c:return self.reply(200,{'monitors':kitchen.monitors(c)})
+                if path=='/api/kds/board':
+                    q=parse_qs(urlparse(self.path).query)
+                    return self.reply(200,kitchen.board(store,q.get('monitor',['0'])[0]))
                 if path in ('/app.js','/receipt.js','/style.css','/theme.css','/mobile.css','/global-config.js','/printing-admin.js','/user-profiles.js','/button-editor.js','/calculator.js','/cash-ui.js',f'/{args.app}.js',f'/{args.app}-extras.js',f'/{args.app}-plus.js',f'/{args.app}-carta.js',f'/{args.app}-mobile.js'):
                     return self.reply(200,(assets/path[1:]).read_bytes(),'text/javascript; charset=utf-8' if path.endswith('.js') else 'text/css; charset=utf-8')
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.27'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.28'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/comandero':
@@ -155,6 +189,8 @@ def main(default_app='tpv'):
                     hospitality.extend_state(store,data,user['id'])
                     carta.extend_state(store,data)
                     data['lan']=self.lan
+                    with store.db() as c:data['prep_types']=kitchen.prep_types(c);data['kitchen_monitors']=kitchen.monitors(c)
+                    data['server_mode']=server_config.summary(folder)
                     data['lan_allow_pay']=comandero.allow_pay(store) if self.lan else True
                     data['button_layout']=button_layout.read(store)
                     data['ticket_template']=ticket_templates.current(store)
@@ -210,6 +246,11 @@ def main(default_app='tpv'):
                 size=int(self.headers.get('Content-Length','0'))
                 if size<1 or size>1_000_000:raise ValueError('Petición demasiado grande o vacía.')
                 data=json.loads(self.rfile.read(size));action=self.path.removeprefix('/api/')
+                if action in ('server_open_cfg','server_new_code') and args.servidor and not self.lan:
+                    if action=='server_new_code':return self.reply(200,comandero.new_code(store))
+                    os.startfile(str(server_config.path(folder)));return self.reply(200,{'ok':True})
+                if action.startswith('kds/'):
+                    return self.reply(200,kitchen.kds_action(store,action.removeprefix('kds/'),data))
                 if action=='login':
                     uid=int(data['user_id'])
                     with guard:
@@ -230,6 +271,12 @@ def main(default_app='tpv'):
                     return self.reply(200,{'ok':True})
                 user=self.user()
                 if not user:return self.reply(401,{'error':'La sesión ha terminado. Entra con tu usuario.'})
+                if action in kitchen.ADMIN_ACTIONS:
+                    if args.app!='admin' or user['role']!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    return self.reply(200,kitchen.mutate(store,action,data,user['id']))
+                if action=='sold_out':
+                    if args.app=='tpv':permissions.require(store,user['id'],'ticket_add')
+                    return self.reply(200,kitchen.set_sold_out(store,data.get('product_id'),data.get('sold_out') is True,user['id']))
                 if action in carta.TPV_ACTIONS|carta.ADMIN_ACTIONS:
                     return self.reply(200,carta.mutate(store,action,data,user['id'],args.app))
                 if action in hospitality.TPV_ACTIONS|hospitality.ADMIN_ACTIONS:
@@ -357,7 +404,8 @@ def main(default_app='tpv'):
                 result=store.mutate(action,data,actor=user['id'])
                 if args.app=='tpv':
                     if action in ('pay','split_pay') and result.get('receipt',{}).get('status')=='paid':
-                        printing.enqueue_receipt(store,result['receipt']['id'],automatic=True)
+                        auto=printing.enqueue_receipt(store,result['receipt']['id'],automatic=True)
+                        result['auto_printed']=bool(auto.get('job_id') or auto.get('duplicate'))
                     result['print_warnings']=printing.dispatch(store)
                 self.reply(200,result)
             except sqlite3.IntegrityError:self.reply(409,{'error':'La operación ya está registrada o ese nombre está en uso. Actualiza la pantalla.'})
@@ -365,7 +413,9 @@ def main(default_app='tpv'):
             except (ValueError,KeyError,TypeError) as error:self.reply(400,{'error':str(error)})
             except Exception:self.reply(500,{'error':'No se pudo guardar. La operación se ha deshecho.'})
 
-    LAN_OPEN={'/','/logo.png','/style.css','/theme.css','/mobile.css'}
+    LAN_OPEN={'/','/logo.png','/style.css','/theme.css','/mobile.css','/manifest.webmanifest','/cocina','/kds.js','/kds.css'}
+    COOKIE='m2dev'
+
 
     class LanHandler(Handler):
         lan=True
@@ -373,7 +423,12 @@ def main(default_app='tpv'):
         def device(self):
             path=self.path.split('?')[0]
             if path in LAN_OPEN or (path.endswith('.js') and not path.startswith('/api/')):return True
-            return comandero.device_ok(store,self.headers.get('X-Marchan2-Device'))
+            token_value=self.headers.get('X-Marchan2-Device') or ''
+            if not token_value:
+                for part in (self.headers.get('Cookie') or '').split(';'):
+                    k,_,v=part.strip().partition('=')
+                    if k==COOKIE:token_value=v
+            return comandero.device_ok(store,token_value)
         def do_GET(self):
             if not self.device():return self.reply(401,{'error':'Empareja este móvil con el código que muestra el TPV.','pair_required':True})
             return super().do_GET()
@@ -384,7 +439,8 @@ def main(default_app='tpv'):
                     size=int(self.headers.get('Content-Length','0'))
                     if size<1 or size>10_000:raise ValueError('Petición no válida.')
                     data=json.loads(self.rfile.read(size))
-                    return self.reply(200,comandero.pair(store,data.get('code'),data.get('name')))
+                    paired=comandero.pair(store,data.get('code'),data.get('name'))
+                    return self.reply(200,paired,headers={'Set-Cookie':f"{COOKIE}={paired['device_token']}; Max-Age=315360000; Path=/; HttpOnly; SameSite=Strict"})
                 except PermissionError as error:return self.reply(403,{'error':str(error)})
                 except (ValueError,TypeError):return self.reply(400,{'error':'Petición no válida.'})
             if not self.device():return self.reply(401,{'error':'Empareja este móvil con el código que muestra el TPV.','pair_required':True})
@@ -393,22 +449,23 @@ def main(default_app='tpv'):
             return super().do_POST()
 
     server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
-    if args.app=='tpv' and comandero.enabled_port(store):
+    network_port=server_config.network_port(folder,args,comandero.enabled_port(store))
+    if network_port:
         try:
-            lan_server=ThreadingHTTPServer((args.lan_host,comandero.enabled_port(store)),LanHandler)
+            lan_server=ThreadingHTTPServer((server_config.listen_host(folder,args),network_port),LanHandler)
             lan['port']=lan_server.server_port
             threading.Thread(target=lan_server.serve_forever,daemon=True).start()
-            print('Comandero móvil · '+comandero.status(store,lan['port'])['url'],flush=True)
+            print('Red local · '+comandero.status(store,lan['port'])['url'],flush=True)
         except OSError as error:
             (folder/'desktop.log').open('a',encoding='utf8').write(f'No se pudo abrir el comandero móvil: {error}'+chr(10))
     backup.start_scheduler(store,threading.Event())
     url=f'http://127.0.0.1:{server.server_port}'
-    (folder/f'session-{args.app}.json').write_text(json.dumps({'url':url,'pid':os.getpid(),'app':args.app}),encoding='utf8')
+    (folder/f"session-{'servidor' if args.servidor else args.app}.json").write_text(json.dumps({'url':url,'pid':os.getpid(),'app':args.app}),encoding='utf8')
     print('Marchan2 '+args.app+' · '+url,flush=True)
     if not args.no_browser and not args.browser:
-        title='Marchan2 · '+('TPV' if args.app=='tpv' else 'Administración')
+        title='Marchan2 · Servidor' if args.servidor else 'Marchan2 · '+('TPV' if args.app=='tpv' else 'Administración')
         try:
-            if desktop.run(server,url,title,folder/'webview',fullscreen=args.fullscreen,log=folder/'desktop.log'):
+            if desktop.run(server,url+('/servidor' if args.servidor else ''),title,folder/'webview',fullscreen=args.fullscreen,log=folder/'desktop.log'):
                 server.server_close();return
         except Exception:pass
     if not args.no_browser:webbrowser.open(url)

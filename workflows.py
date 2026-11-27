@@ -69,6 +69,8 @@ class WorkflowMixin:
         carta.initialize(self)
         import verifactu
         verifactu.initialize(self)
+        import kitchen
+        kitchen.initialize(self)
 
     def users(self,active_only=True):
         with self.db() as c:

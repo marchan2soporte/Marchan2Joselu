@@ -718,3 +718,21 @@ dialog:has(#tendered) .modal-title { margin-bottom: 0; }
 /* Mesa que pide la cuenta (TPV) */
 .table-card.bill-requested { border-color: #3b82c4 !important; box-shadow: 0 0 0 3px color-mix(in srgb, #3b82c4 35%, transparent), var(--shadow) !important; }
 .table-card.bill-requested::before { content: "🧾 Cuenta"; position: absolute; top: -10px; left: 10px; font-size: 10px; font-weight: 800; background: #3b82c4; color: #fff; padding: 2px 8px; border-radius: 999px; }
+
+.prep-swatch { display: inline-block; width: 18px; height: 18px; border-radius: 6px; vertical-align: middle; }
+
+/* 0.28 · Cobro, cierre con cuentas abiertas y agotados */
+.paid-box { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 18px; border-radius: 20px; background: color-mix(in srgb, var(--mint) 35%, var(--surface)); margin: 6px 0 10px; }
+.paid-box span { font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.paid-box b { font-size: 46px; font-weight: 850; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.paid-question { text-align: center; font-size: 18px; font-weight: 800; margin: 6px 0 0; }
+.paid-actions .button { flex: 1; min-height: 58px; font-size: 16px; }
+.close-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.close-choice .service-choice small { color: var(--muted); font-weight: 600; font-size: 12px; }
+[data-soldout] { position: relative; opacity: .45; filter: grayscale(1); }
+[data-soldout]::after { content: "AGOTADO"; position: absolute; inset: 40% 8px auto; text-align: center; font-weight: 900; letter-spacing: 2px; color: #fff; background: #d0533f; border-radius: 8px; padding: 4px; transform: rotate(-8deg); font-size: 12px; }
+.soldout-list { display: grid; gap: 6px; max-height: 55vh; overflow: auto; }
+.soldout-row { display: flex !important; flex-direction: row !important; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+.soldout-row span { display: grid; } .soldout-row small { color: var(--green); font-weight: 700; }
+.soldout-row.off small { color: var(--danger); }
+.soldout-row input { width: 26px; height: 26px; min-height: 0; accent-color: #d0533f; }

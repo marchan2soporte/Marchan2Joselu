@@ -1,15 +1,30 @@
-# Marchan2 0.27 — JoseluIA
+# Marchan2 0.28 — JoseluIA
 
 Copia de desarrollo **Marchan2Joselu**, creada el 26/10/2026 a partir de [Marchan2Pedro](https://github.com/marchan2soporte/Marchan2Pedro) en la base 0.21. Conserva el historial original; los cambios de esta copia se publican en Marchan2Joselu. Consulta [BASE_PEDRO.md](BASE_PEDRO.md) para el resumen de la revisión.
 
 ## Abrir
 Extrae TODO el ZIP y conserva _internal junto a los dos ejecutables.
-Cierra las versiones anteriores. Abre Marchan2_Administracion.exe para administrar y Marchan2_TPV.exe para vender. Cada una se abre en su propia ventana de Windows (no en el navegador) y ambas comparten los datos del equipo. Al cerrar la ventana se detiene la aplicación.
+Cierra las versiones anteriores. Abre Marchan2_Administracion.exe para administrar, Marchan2_TPV.exe para vender y Marchan2_Servidor.exe en el equipo principal si usas móviles, monitores de cocina u otros TPV en red. Cada una se abre en su propia ventana de Windows (no en el navegador) y ambas comparten los datos del equipo. Al cerrar la ventana se detiene la aplicación.
 Primer acceso: ADMIN / PIN 1234. Si ya habías cambiado el PIN, conserva el tuyo.
 En Administración → Puntos de venta puedes configurar varios puestos y activar el que usa este TPV local. Instala primero la impresora de red en Windows para asignarla como cola de tickets o cocina. Si no hay cola asignada, «Ver cuenta» abre el diálogo de impresión de Windows. La IP guardada para el diagnóstico de red no es un destino de impresión. El puerto COM de balanza queda preparado para conectar un modelo con protocolo conocido.
 En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El papel de 80 mm admite inicialmente 48 columnas; puedes ajustar columnas, líneas de avance y corte por destino. Prueba primero «Sin corte» y después «Corte parcial» solo si el equipo dispone de cortador ESC/POS compatible. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. Los informes X/Z de jornada se abren desde Caja y jornada; usan el destino de impresión de Z del puesto. El antiguo resumen de prueba por fecha se conserva como compatibilidad interna, separado de los cierres nuevos.
 Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y en Windows 10 actualizado); no requiere instalar Python ni conexión a Internet. Si WebView2 no está disponible, la aplicación se abre en el navegador como antes.
+
+## Novedades 0.28 · servidor, monitores de cocina y cierre flexible
+
+- **Marchan2 Servidor y server.cfg (como en Ágora).** En el equipo principal abre `Marchan2_Servidor.exe`. Crea `%LOCALAPPDATA%\Marchan2\server.cfg` (puerto, interfaz y nombre) y su ventana muestra la dirección para los móviles, la de los monitores de cocina (`/cocina`), el código de emparejamiento y los dispositivos. Debe estar abierto mientras se trabaja.
+  - **Otros TPV de la red:** en su `server.cfg`, `[cliente] servidor = IP:PUERTO`. `Marchan2_TPV.exe` abrirá el TPV del servidor, sin base de datos propia.
+  - Si existe `server.cfg`, el TPV ya no abre la red: lo hace el servidor. Sin `server.cfg` todo sigue como antes (comandero integrado en el TPV).
+  - Reserva en el router una IP fija para el servidor: si la dirección cambia, los móviles tendrán que emparejarse otra vez.
+- **El móvil ya no se desvincula al salir de la app**: el emparejamiento se guarda también en una cookie de larga duración y la sesión del camarero se mantiene (12 horas) aunque se cierre el navegador. Se puede instalar como app (manifiesto web).
+- **Plano de mesas en el móvil**: botón «Plano / Lista» en Mesas, con la forma y la posición dibujadas en Administración.
+- **Cerrar jornada con cuentas abiertas**: al cerrar, si hay cuentas pendientes, pregunta si quieres **cobrarlas** (muestra solo las pendientes y vuelve a la lista tras cada cobro) o **dejarlas abiertas** para la siguiente jornada. Las que quedan abiertas figuran en el informe Z.
+- **Al cobrar una mesa**: pregunta «¿Imprimir el ticket?» (o avisa si se imprimió automáticamente), muestra el cambio y sale a las mesas.
+- **Monitores de cocina independientes** (`http://IP:PUERTO/cocina`): fuera del TPV. Cada pantalla se empareja y elige su monitor. Comandas con cronómetro y colores, marcar listo por comanda o por plato, recuperar comandas listas (15 min), pantalla completa y, en ⚙, disposición **desde la izquierda, desde la derecha o apiladas como papel pinchado**, tipo de aviso y **volumen del pitido**.
+- **Administración → Monitores de cocina**: crear monitores, elegir los tipos de preparación que muestran, disposición, sonido, volumen y minutos de aviso.
+- **Administración → Tipos de preparación**: ahora se pueden crear (FRÍOS, CALIENTES…), cambiar de nombre y color y eliminar si no tienen productos. Se usan en productos, impresoras de cocina y monitores.
+- **Productos agotados**: Otros → Agotados (o el botón del móvil). Lo agotado se ve tachado y no se puede vender hasta desmarcarlo.
 
 ## Novedades 0.27 · impresión con diseño, cobro desde el móvil y rondas
 
@@ -137,7 +152,7 @@ Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de dato
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-106 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+111 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
 Fuentes: Python, SQLite, pywebview y HTML/CSS/JS locales. El diseño está en web/theme.css (variables de color, modo oscuro y pantalla de venta).
 Dependencias: python -m pip install -r requirements.txt
 Ejecutar: python tpv.py / python admin.py (añade --browser para usar el navegador o --fullscreen para pantalla completa)

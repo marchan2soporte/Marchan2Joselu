@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Marchan2 · Servidor</title>
+<style>
+:root{--bg:#0b1416;--card:#13201f;--line:#26393a;--ink:#e6efee;--muted:#8ea3a2;--green:#22a77a;--mint:#b6ef5c;font-family:"Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+body{margin:0;padding:24px;background:var(--bg)}h1{margin:0;font-size:26px}h1 span{color:var(--mint)}small,.muted{color:var(--muted)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.live{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:#22a77a22;color:var(--green);font-weight:700}
+.live i{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px #22a77a33}.off{background:#d0533f22;color:#ff7a6b}.off i{background:#ff7a6b}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.card h2{margin:0 0 10px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}.url{font-size:20px;font-weight:800;word-break:break-all;color:#fff}
+.code{font-size:44px;font-weight:800;letter-spacing:8px;color:var(--mint);font-variant-numeric:tabular-nums}
+button{font:inherit;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;background:#ffffff14;color:var(--ink)}button:hover{background:#ffffff22}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#ffffff08}
+.note{margin-top:14px;padding:12px 14px;border-radius:14px;background:#d4a72c22;color:#f2cf73;font-size:13px;line-height:1.5}
+</style></head><body>
+<div class="top"><div><small>MARCHAN2</small><h1>Servidor<span>.</span></h1></div><span class="live" id="live"><i></i> Activo</span></div>
+<div class="grid">
+ <section class="card"><h2>Comandero móvil y TPV de otros equipos</h2><div class="url" id="url">…</div><p class="muted">Abre esta dirección en el navegador del móvil o configúrala en el server.cfg de otros equipos (<code>[cliente] servidor</code>).</p></section>
+ <section class="card"><h2>Monitores de cocina</h2><div class="url" id="kds">…</div><ul id="monitors" style="margin-top:12px"></ul></section>
+ <section class="card"><h2>Código de emparejamiento</h2><div class="code" id="code">······</div><p class="muted">Cada móvil o pantalla se empareja una sola vez.</p><button id="newcode">Cambiar código</button></section>
+ <section class="card"><h2>Dispositivos emparejados</h2><ul id="devices"></ul></section>
+ <section class="card"><h2>Configuración</h2><p class="muted" id="cfg"></p><button id="opencfg">Abrir server.cfg</button><p class="muted">Tras editarlo, cierra esta ventana y vuelve a abrir Marchan2 Servidor.</p></section>
+</div>
+<div class="note">⚠ Mantén esta ventana abierta mientras se trabaja: si se cierra, los móviles y los monitores dejan de funcionar. Reserva una IP fija para este equipo en el router para que la dirección no cambie (si cambia, los móviles tendrán que volver a emparejarse). Usa solo la wifi privada del local.</div>
+<script>
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function load(){try{const r=await fetch('/api/server_status').then(r=>r.json());
+ document.getElementById('url').textContent=r.url;document.getElementById('kds').textContent=r.url+'/cocina';
+ document.getElementById('code').textContent=(r.code||'').replace(/(\d{3})(\d{3})/,'$1 $2');
+ document.getElementById('live').className='live'+(r.running?'':' off');document.getElementById('live').innerHTML=r.running?'<i></i> Activo':'<i></i> Puerto ocupado';
+ document.getElementById('devices').innerHTML=r.devices.filter(d=>!d.revoked).map(d=>`<li><b>📱 ${esc(d.name)}</b><small>${esc((d.last_seen||d.created).replace('T',' ').slice(0,16))}</small></li>`).join('')||'<li class="muted">Ninguno todavía</li>';
+ document.getElementById('monitors').innerHTML=r.monitors.map(m=>`<li><b>🖥 ${esc(m.name)}</b><small>${esc(m.prep_types.join(', '))}</small></li>`).join('');
+ document.getElementById('cfg').innerHTML=`Puerto <b>${r.cfg.port}</b> · escucha en <b>${esc(r.cfg.listen)}</b><br>${esc(r.config)}`}catch(e){document.getElementById('live').className='live off'}}
+async function post(a){await fetch('/api/'+a,{method:'POST',headers:{'Content-Type':'application/json','X-Marchan2-Token':TOKEN},body:'{}'});load()}
+let TOKEN='';fetch('/').then(r=>r.text()).then(t=>{TOKEN=(t.match(/marchan-token" content="([^"]+)/)||[])[1]||''});
+document.getElementById('newcode').onclick=()=>post('server_new_code');document.getElementById('opencfg').onclick=()=>post('server_open_cfg');
+load();setInterval(load,5000);
+</script></body></html>

@@ -129,3 +129,26 @@ def run(server, url, title, storage, fullscreen=False, log=None):
     closed.set()
     server.shutdown()
     return True
+
+
+def open_remote(url, title, storage, fullscreen=False, log=None):
+    """Equipo cliente: ventana con el TPV de otro equipo (server.cfg → [cliente] servidor)."""
+    unblock_bundle()
+    try:
+        import webview
+        webview.create_window(title, url, width=1366, height=820, min_size=(1024, 680), maximized=True,
+                              fullscreen=fullscreen, background_color='#0E1A1C', text_select=True)
+        Path(storage).mkdir(parents=True, exist_ok=True)
+        webview.start(private_mode=False, storage_path=str(storage))
+        return True
+    except Exception:
+        _log(log, 'No se pudo abrir la ventana del servidor remoto: ' + traceback.format_exc())
+        return False
+
+
+def message(title, text):
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(None, text, title, 0x40)
+    except Exception:
+        print(title + ': ' + text)

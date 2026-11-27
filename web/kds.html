@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="marchan-token" content="__TOKEN__"><meta name="marchan-lan" content="__LAN__"><meta name="theme-color" content="#0b1416">
+<title>Marchan2 · Monitor de cocina</title><link rel="stylesheet" href="/kds.css"></head>
+<body>
+<header class="kds-bar">
+  <div class="kds-brand"><b id="kds-name">Monitor de cocina</b><small id="kds-types"></small></div>
+  <div class="kds-counters"><span><b id="kds-orders">0</b> comandas</span><span><b id="kds-items">0</b> platos</span><span>media <b id="kds-avg">0:00</b></span></div>
+  <div class="kds-actions"><span class="kds-clock" id="kds-clock"></span><button id="kds-recall" title="Recuperar comandas listas">↶ Recuperar</button><button id="kds-settings" title="Configuración">⚙</button><button id="kds-full" title="Pantalla completa">⛶</button></div>
+</header>
+<main id="kds-board" class="kds-board"></main>
+<div id="kds-sheet" class="kds-sheet" hidden></div>
+<div id="kds-unlock" class="kds-unlock" hidden><button>🔔 Toca para activar el sonido</button></div>
+<div id="kds-toast" class="kds-toast"></div>
+<script src="/kds.js"></script>
+</body></html>

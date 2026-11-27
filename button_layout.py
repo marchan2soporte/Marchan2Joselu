@@ -18,7 +18,8 @@ CATALOG=[
  ('service','Tipo de servicio','🛵','ticket_open'),('invite','Invitar','♡','ticket_invite'),
  ('ticket_discount','Dto. ticket','%','ticket_discount'),('merge','Unir cuentas','⊕','ticket_merge'),
  ('clock','Fichar','⏱',''),('comandero','Comandero móvil','📱',''),
- ('repeat_round','Repetir ronda','↻','ticket_add'),('bill_request','Pide la cuenta','🧾','ticket_open')]
+ ('repeat_round','Repetir ronda','↻','ticket_add'),('bill_request','Pide la cuenta','🧾','ticket_open'),
+ ('sold_out_manage','Agotados','🚫','ticket_add')]
 DEFAULT={'right':['prepare','march','course','receipt','payments','others'],
          'others':[r[0] for r in CATALOG if r[0] not in ('prepare','march','course','receipt','payments','others')]}
 

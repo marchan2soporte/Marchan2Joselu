@@ -156,7 +156,8 @@ def mutate(store,action,data,actor):
             store.audit(c,actor,'cash_'+kind);return {'movement_id':mid}
         if type(data.get('expected_revision')) is not int or data['expected_revision']!=session['revision']:raise ValueError('La caja ha cambiado durante el recuento. Actualiza y revisa los importes.')
         pending=c.execute("SELECT COUNT(*) FROM orders o WHERE status='open' AND (EXISTS(SELECT 1 FROM lines WHERE order_id=o.id) OR EXISTS(SELECT 1 FROM payments WHERE order_id=o.id))").fetchone()[0]
-        if pending:raise ValueError('Hay '+str(pending)+' cuentas abiertas con productos o pagos. Cóbralas o cancélalas antes de cerrar.')
+        if pending and data.get('keep_open') is not True:raise ValueError('Hay '+str(pending)+' cuentas abiertas con productos o pagos. Cóbralas o cancélalas antes de cerrar.')
+        open_accounts=[dict(r) for r in c.execute("SELECT o.id,COALESCE(t.name,o.source_label,'VENTA DIRECTA') location,(SELECT COALESCE(SUM(qty*price),0) FROM lines WHERE order_id=o.id)-(SELECT COALESCE(SUM(amount),0) FROM payments WHERE order_id=o.id) due FROM orders o LEFT JOIN tables t ON t.id=o.table_id WHERE o.status='open' AND EXISTS(SELECT 1 FROM lines WHERE order_id=o.id)")] if pending else []
         if 'counted_cash' not in data:raise ValueError('Indica el efectivo contado.')
         counted=money(data['counted_cash']);declared_card=money(data['counted_card']) if str(data.get('counted_card','')).strip() else None
         denominations=data.get('denominations')
@@ -174,7 +175,8 @@ def mutate(store,action,data,actor):
         closed_user=c.execute('SELECT name FROM users WHERE id=?',(actor,)).fetchone()
         before.update(kind='Z',status='closed',closed=now,closed_by=actor,closed_by_name=closed_user[0] if closed_user else 'ANTERIOR',
             counted_cash=counted,cash_difference=difference,counted_card=declared_card,
-            card_difference=card_difference,denominations=denominations,reason=reason,z_number=f"Z-{session['id']:06d}")
+            card_difference=card_difference,denominations=denominations,reason=reason,z_number=f"Z-{session['id']:06d}",
+            open_accounts=open_accounts,open_accounts_due=sum(a['due'] for a in open_accounts))
         c.execute("UPDATE cash_sessions SET status='closed',closed=?,closed_by=?,snapshot=?,close_request=? WHERE id=?",(now,actor,json.dumps(before,ensure_ascii=False),request,session['id']))
         # Empty, unpaid accounts can safely release their tables at closing.
         c.execute("UPDATE orders SET status='void' WHERE status='open' AND NOT EXISTS(SELECT 1 FROM lines WHERE order_id=orders.id) AND NOT EXISTS(SELECT 1 FROM payments WHERE order_id=orders.id)")
@@ -205,6 +207,9 @@ def text_report(r):
         lines.extend(['Efectivo contado: '+eur(r['counted_cash']),'Diferencia efectivo: '+eur(r['cash_difference'])])
         if r['counted_card'] is not None:lines.extend(['Tarjeta declarada: '+eur(r['counted_card']),'Diferencia tarjeta: '+eur(r['card_difference'])])
         if r['reason']:lines.append('Observacion: '+r['reason'])
+    if r.get('open_accounts'):
+        lines.append('Cuentas que quedan abiertas: '+str(len(r['open_accounts']))+' / pendiente '+eur(r.get('open_accounts_due',0)))
+        lines.extend('  #'+str(a['id'])+' '+a['location']+' '+eur(a['due']) for a in r['open_accounts'])
     lines.extend(['MOVIMIENTOS']+[m['created']+' '+m['kind']+' '+eur(m['amount'])+' '+m['reason'] for m in r['movements']])
     lines.extend(['COBROS POR USUARIO']+[name+': '+eur(amount) for name,amount in r['payments_by_user']])
     for section in r.get('sections',[]):

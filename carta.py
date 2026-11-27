@@ -116,10 +116,12 @@ def add_menu(store, c, data, actor):
     from pos_profiles import active_options
     cash_register.require_open(c)
     store.require_open(c, data['order_id'])
-    row = c.execute('SELECT f.*,p.name product_name,p.tax,p.category_id,p.menu_sections FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1', (data['format_id'],)).fetchone()
+    row = c.execute('SELECT f.*,p.name product_name,p.tax,p.category_id,p.menu_sections,p.sold_out FROM formats f JOIN products p ON p.id=f.product_id WHERE f.id=? AND f.active=1 AND p.active=1', (data['format_id'],)).fetchone()
     if not row:
         raise ValueError('El menú ya no está disponible.')
     sections = json.loads(row['menu_sections'])
+    if row['sold_out']:
+        raise ValueError(row['product_name'] + ' está AGOTADO.')
     if not sections:
         raise ValueError('Este producto no es un menú.')
     choices = data.get('choices')
@@ -138,6 +140,8 @@ def add_menu(store, c, data, actor):
         p = c.execute('SELECT p.*,(SELECT id FROM formats WHERE product_id=p.id AND active=1 ORDER BY id LIMIT 1) format_id, (SELECT name FROM formats WHERE product_id=p.id AND active=1 ORDER BY id LIMIT 1) format_name FROM products p WHERE p.id=? AND p.active=1', (choice,)).fetchone()
         if not p or not p['format_id']:
             raise ValueError('Un plato del menú ya no está disponible.')
+        if p['sold_out']:
+            raise ValueError(p['name'] + ' está AGOTADO. Elige otro plato.')
         lid = c.execute('''INSERT INTO lines(order_id,product_id,format_id,name,format,price,qty,tax,extras,note,prep,course,kitchen,
             base_price,reference_price,menu_role,menu_parent_id) VALUES(?,?,?,?,?,0,1,?,?,?,?,?,?,0,0,'item',?)''',
                         (data['order_id'], p['id'], p['format_id'], p['name'], 'MENÚ · ' + section['name'], row['tax'], '[]', '',

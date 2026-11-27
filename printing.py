@@ -141,8 +141,11 @@ def save_kitchen(store, data):
     raw_columns, feed_lines, cut_mode = _raw_settings(data)
     if not 1 <= len(name) <= 80 or not 1 <= len(printer) <= 255:
         raise ValueError('Indica un nombre y una impresora de Windows.')
-    if not isinstance(preps, list) or not preps or len(set(preps)) != len(preps) or any(p not in PREP_TYPES for p in preps):
-        raise ValueError('Selecciona BARRA, COCINA o ambas.')
+    import kitchen
+    with store.db() as c:
+        valid = kitchen.prep_names(c) if c.execute("SELECT 1 FROM sqlite_master WHERE name='prep_types'").fetchone() else list(PREP_TYPES)
+    if not isinstance(preps, list) or not preps or len(set(preps)) != len(preps) or any(p not in valid for p in preps):
+        raise ValueError('Selecciona al menos un tipo de preparación existente.')
     if not isinstance(centers, list) or len(set(centers)) != len(centers) or any(type(i) is not int for i in centers):
         raise ValueError('Centros de venta no válidos.')
     with store.db() as c:
