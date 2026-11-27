@@ -99,7 +99,7 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.26'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.27'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/comandero':
@@ -154,6 +154,8 @@ def main(default_app='tpv'):
                     data['cash_session']=cash_register.status(store)
                     hospitality.extend_state(store,data,user['id'])
                     carta.extend_state(store,data)
+                    data['lan']=self.lan
+                    data['lan_allow_pay']=comandero.allow_pay(store) if self.lan else True
                     data['button_layout']=button_layout.read(store)
                     data['ticket_template']=ticket_templates.current(store)
                     profile_template=data['pos_profile']['options']['receipt_template_id'] if data['pos_profile'] else None
@@ -322,6 +324,13 @@ def main(default_app='tpv'):
                     if result.get('job_id'):
                         result['print_warnings']=printing.dispatch(store,[result['job_id']])
                     return self.reply(200,result)
+                if action=='ticket_render':
+                    if data.get('order_id') is not None:
+                        if args.app=='tpv':permissions.require(store,user['id'],'ticket_print')
+                        return self.reply(200,printing.render_preview(store,order_id=data['order_id']))
+                    if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
+                    template=data.get('template') if isinstance(data.get('template'),dict) else {}
+                    return self.reply(200,printing.render_preview(store,template))
                 if action=='print_retry':
                     if args.app=='tpv':permissions.require(store,user['id'],'print_retry')
                     result={'print_warnings':printing.dispatch(store,[int(data['job_id'])])}
@@ -379,6 +388,8 @@ def main(default_app='tpv'):
                 except PermissionError as error:return self.reply(403,{'error':str(error)})
                 except (ValueError,TypeError):return self.reply(400,{'error':'Petición no válida.'})
             if not self.device():return self.reply(401,{'error':'Empareja este móvil con el código que muestra el TPV.','pair_required':True})
+            if self.path.removeprefix('/api/') in comandero.PAY_ACTIONS and not comandero.allow_pay(store):
+                return self.reply(403,{'error':'El cobro desde el móvil está desactivado. Cobra en el TPV principal o actívalo en Otros → Comandero móvil.'})
             return super().do_POST()
 
     server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)

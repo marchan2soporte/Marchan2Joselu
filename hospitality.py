@@ -20,7 +20,7 @@ ALLERGENS = {
 }
 SERVICE_TYPES = {'mesa': 'Mesa', 'barra': 'Barra', 'llevar': 'Para llevar', 'domicilio': 'Domicilio'}
 TPV_ACTIONS = {'order_guests', 'order_customer', 'order_service', 'ticket_discount', 'invite',
-               'merge', 'clock', 'customer_save'}
+               'merge', 'clock', 'customer_save', 'bill_request'}
 ADMIN_ACTIONS = {'customer_save', 'customer_delete', 'product_extra', 'table_layout', 'prep_notes_save'}
 DEFAULT_PREP_NOTES = ['SIN CEBOLLA', 'SIN SAL', 'SIN GLUTEN', 'POCO HECHO', 'AL PUNTO', 'MUY HECHO', 'PARA COMPARTIR',
                       'SALSA APARTE', 'SIN HIELO', 'CON HIELO', 'URGENTE', 'PARA LLEVAR']
@@ -51,7 +51,7 @@ def initialize(store):
                                       if n not in {r['name'] for r in c.execute(f'PRAGMA table_info({table})')}]
         add('orders', {'guests': 'INTEGER', 'customer_id': 'INTEGER REFERENCES customers(id)',
                        'service_type': "TEXT NOT NULL DEFAULT ''", 'delivery_address': "TEXT NOT NULL DEFAULT ''",
-                       'merged_into': 'INTEGER'})
+                       'merged_into': 'INTEGER', 'bill_requested_at': 'TEXT'})
         add('products', {'allergens': "TEXT NOT NULL DEFAULT '[]'", 'favorite': 'INTEGER NOT NULL DEFAULT 0'})
         add('tables', {'pos_x': 'INTEGER', 'pos_y': 'INTEGER', 'shape': "TEXT NOT NULL DEFAULT 'square'",
                        'seats': 'INTEGER NOT NULL DEFAULT 4'})
@@ -219,6 +219,11 @@ def mutate(store, action, data, actor, app):
             if not 0 <= guests <= 500:
                 raise ValueError('Comensales entre 0 y 500.')
             c.execute('UPDATE orders SET guests=? WHERE id=?', (guests or None, order['id']))
+            return {'ok': True}
+
+        if action == 'bill_request':
+            need('ticket_open')
+            c.execute('UPDATE orders SET bill_requested_at=? WHERE id=?', (NOW() if data.get('requested') else None, order['id']))
             return {'ok': True}
 
         if action == 'order_customer':

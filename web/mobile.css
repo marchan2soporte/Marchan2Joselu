@@ -177,3 +177,9 @@ body.m-app button:active:not(:disabled) { transform: scale(.96); }
   dialog:has(#tendered) .number-pad, dialog:has(#split-value) .number-pad { display: none !important; }
   dialog:has(#tendered) .pay-total { font-size: 38px; }
 }
+
+.m-cta.compact { flex: 0 0 64px; font-size: 24px; }
+
+/* Pide la cuenta */
+.m-table.busy.billing { background: linear-gradient(160deg, #3b82c4, #24609b); }
+.m-dot.bill { background: #fff; }

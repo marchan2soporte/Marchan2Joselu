@@ -34,7 +34,7 @@ def initialize(store):
 
 def _settings(c):
     row = c.execute("SELECT value FROM settings WHERE key='comandero'").fetchone()
-    return dict({'enabled': False, 'port': DEFAULT_PORT, 'code': ''}, **(json.loads(row['value']) if row else {}))
+    return dict({'enabled': False, 'port': DEFAULT_PORT, 'code': '', 'allow_pay': False}, **(json.loads(row['value']) if row else {}))
 
 
 def _save(c, data):
@@ -61,7 +61,7 @@ def status(store, running_port=None):
         cfg = _settings(c)
         devices = [dict(r) for r in c.execute('SELECT id,name,created,last_seen,revoked FROM comandero_devices ORDER BY revoked, id DESC')]
     ip = local_ip()
-    return {'enabled': cfg['enabled'], 'port': cfg['port'], 'code': cfg['code'], 'running': running_port is not None,
+    return {'enabled': cfg['enabled'], 'port': cfg['port'], 'code': cfg['code'], 'allow_pay': cfg['allow_pay'], 'running': running_port is not None,
             'url': f'http://{ip}:{running_port or cfg["port"]}', 'devices': devices}
 
 
@@ -71,7 +71,7 @@ def configure(store, data):
         raise ValueError('Puerto entre 1024 y 65000.')
     with store.db() as c:
         cfg = _settings(c)
-        cfg.update(enabled=bool(data.get('enabled')), port=port)
+        cfg.update(enabled=bool(data.get('enabled')), port=port, allow_pay=data.get('allow_pay') is True)
         if cfg['enabled'] and not cfg['code']:
             cfg['code'] = f'{secrets.randbelow(10**6):06d}'
         _save(c, cfg)
@@ -120,6 +120,14 @@ def device_ok(store, token):
         if row:
             c.execute('UPDATE comandero_devices SET last_seen=? WHERE id=?', (datetime.now().isoformat(timespec='seconds'), row['id']))
     return bool(row)
+
+
+PAY_ACTIONS = {'pay', 'split_pay'}
+
+
+def allow_pay(store):
+    with store.db() as c:
+        return _settings(c)['allow_pay']
 
 
 def enabled_port(store):

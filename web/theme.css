@@ -700,3 +700,21 @@ dialog:has(#tendered) .modal-title { margin-bottom: 0; }
   .guest-grid { grid-template-columns: repeat(4, 1fr); }
   .admin-table { font-size: 12px; }
 }
+
+/* 0.27 · Diseño de impresión de plantillas y vista exacta */
+.tpl-design { display: grid; gap: 10px; padding: 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); margin-top: 10px; }
+.tpl-design h4 { margin: 0; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+.tpl-design-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tpl-exact-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.tpl-exact { display: grid; justify-items: center; gap: 8px; }
+.tpl-exact img, .receipt-exact img { width: 100%; max-width: 380px; background: #fff; border-radius: 6px; box-shadow: 0 10px 30px #0f1f2326; image-rendering: auto; }
+.tpl-exact small { color: var(--muted); font-size: 11px; text-align: center; }
+#template-preview:not(.show-html) > .template-paper { display: none; }
+#template-preview.show-html > .tpl-exact { display: none; }
+.tpl-text { font-size: 11px; background: #fff; color: #000; padding: 12px; border-radius: 6px; }
+.receipt-exact { display: grid; justify-items: center; padding: 6px 0 4px; max-height: 64vh; overflow: auto; }
+@media (max-width: 900px) { .tpl-design-grid { grid-template-columns: 1fr; } }
+
+/* Mesa que pide la cuenta (TPV) */
+.table-card.bill-requested { border-color: #3b82c4 !important; box-shadow: 0 0 0 3px color-mix(in srgb, #3b82c4 35%, transparent), var(--shadow) !important; }
+.table-card.bill-requested::before { content: "🧾 Cuenta"; position: absolute; top: -10px; left: 10px; font-size: 10px; font-weight: 800; background: #3b82c4; color: #fff; padding: 2px 8px; border-radius: 999px; }

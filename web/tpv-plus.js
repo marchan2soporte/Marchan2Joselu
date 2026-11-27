@@ -58,7 +58,7 @@ renderTables=function(){
   grid.querySelectorAll('[data-table]').forEach(card=>{const t=state.tables.find(t=>t.id===Number(card.dataset.table)),o=state.orders.find(o=>o.table_id===t?.id);
     if(t)card.classList.add('shape-'+(t.shape||'square'));
     if(o){const cu=customerById(o.customer_id);card.insertAdjacentHTML('beforeend',`<div class="table-meta">${o.guests?`<span>👥 ${o.guests}</span>`:''}${o.minutes_open!=null?`<span>⏱ ${minutesLabel(o.minutes_open)}</span>`:''}${cu?`<span class="who">${esc(cu.name)}</span>`:''}</div>`);
-      if(o.minutes_open>=90)card.classList.add('long-stay');if(o.lines.some(l=>l.kitchen==='pending'))card.classList.add('cooking')}
+      if(o.minutes_open>=90)card.classList.add('long-stay');if(o.bill_requested_at)card.classList.add('bill-requested');if(o.lines.some(l=>l.kitchen==='pending'))card.classList.add('cooking')}
     else if(t)card.insertAdjacentHTML('beforeend',`<div class="table-meta"><span>${t.seats||4} plazas</span></div>`)});
   if(tablesMode==='plan'){
     const designed=visible.length&&visible.every(t=>t.pos_x!=null&&t.pos_y!=null);

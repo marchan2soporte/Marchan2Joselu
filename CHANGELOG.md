@@ -1,5 +1,15 @@
 # Cambios de Marchan2
 
+## 0.27
+- ticket_print.py: maqueta común de documentos, salida de texto, ESC/POS (alineación, negrita, doble tamaño, logotipo PNG en trama, corte) y GDI con fuente monoespaciada ajustada al papel; imagen PNG de vista previa con el mismo código de dibujo.
+- Plantillas: alineación de cabecera y pie, nombre y total grandes, separador y logotipo impreso; vista «Impresión exacta» y «Ver cuenta» con la imagen real.
+- Comanda de cocina rediseñada.
+- Detección del controlador de impresora con la API de Windows y caché (de ~5 s a 0,05 s).
+- Cobro desde el móvil configurable (desactivado por defecto) y corrección de crypto.randomUUID en HTTP.
+- PIN y código de emparejamiento con teclado propio en pantallas táctiles.
+- Repetir ronda y «Pide la cuenta».
+- 106 pruebas Python.
+
 ## 0.26
 - web/tpv-mobile.js y web/mobile.css: interfaz propia de comandero para teléfono (mesas, carta y cuenta con controles táctiles, barra inferior, hojas inferiores, áreas seguras, vibración y refresco automático).
 - Aviso «Listo para servir» en el móvil con vibración y sonido cuando cocina marca la comanda.

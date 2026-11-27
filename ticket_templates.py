@@ -9,7 +9,10 @@ BASES = ('80 mm', '56 mm · 32 caracteres', '80 mm · 42 caracteres',
 LINE_ORDERS = ('Por defecto', 'Nombre', 'Categoría')
 PRINT_OPTIONS = {'show_unpaid': 1, 'show_notes': 0, 'show_location': 1,
                  'show_order_id': 1, 'show_tips': 1, 'show_unit_price': 0,
-                 'show_item_tax': 0}
+                 'show_item_tax': 0, 'header_large': 1, 'total_large': 1, 'print_logo': 1}
+STYLE_CHOICES = {'header_align': ('center', ('left', 'center', 'right')),
+                 'footer_align': ('center', ('left', 'center', 'right')),
+                 'separator': ('-', ('-', '=', '·', '*'))}
 
 
 def initialize(store):
@@ -25,6 +28,9 @@ def initialize(store):
                 c.execute(f'ALTER TABLE ticket_templates ADD COLUMN {key} INTEGER NOT NULL DEFAULT {default}')
         if 'line_order' not in columns:
             c.execute("ALTER TABLE ticket_templates ADD COLUMN line_order TEXT NOT NULL DEFAULT 'Por defecto'")
+        for field, (default, _) in STYLE_CHOICES.items():
+            if field not in columns:
+                c.execute(f"ALTER TABLE ticket_templates ADD COLUMN {field} TEXT NOT NULL DEFAULT '{default}'")
         for field in ('header_image', 'footer_image'):
             if field not in columns:
                 c.execute(f"ALTER TABLE ticket_templates ADD COLUMN {field} TEXT NOT NULL DEFAULT ''")
@@ -80,6 +86,11 @@ def save(store, data):
     for field in PRINT_OPTIONS:
         if field in data and not isinstance(data[field], bool):
             raise ValueError('Opción de impresión no válida.')
+    styles = {}
+    for field, (default, allowed) in STYLE_CHOICES.items():
+        styles[field] = data.get(field, default)
+        if styles[field] not in allowed:
+            raise ValueError('Opción de diseño no válida.')
     line_order = data.get('line_order', 'Por defecto')
     if line_order not in LINE_ORDERS:
         raise ValueError('Orden de líneas no válido.')
@@ -111,6 +122,8 @@ def save(store, data):
                                  for field, default in PRINT_OPTIONS.items()), identity))
         c.execute('UPDATE ticket_templates SET header_image=?,footer_image=? WHERE id=?',
                   (images['header_image'], images['footer_image'], identity))
+        c.execute('UPDATE ticket_templates SET ' + ','.join(f'{k}=?' for k in styles) + ' WHERE id=?',
+                  (*styles.values(), identity))
         if data.get('apply_to_active_profile'):
             active = c.execute('SELECT id,options FROM pos_profiles WHERE active=1 ORDER BY id LIMIT 1').fetchone()
             if not active:

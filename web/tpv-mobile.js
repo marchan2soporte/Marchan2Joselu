@@ -28,6 +28,7 @@ function checkReady(){if(!state?.orders||!currentUser)return;const now={};const 
 /* ---------- Render ---------- */
 const mobilePrevRender=render;
 render=function(){if(state&&currentUser)checkReady();
+  if(isMobile()&&state&&currentUser&&view==='pos'&&!order())view='tables';
   if(!isMobile()||!state||!currentUser||!['tables','pos'].includes(view)||(view==='pos'&&!order())){document.body.classList.remove('m-app');if(isMobile()&&state&&currentUser)document.body.classList.add('m-lite');else document.body.classList.remove('m-lite');return mobilePrevRender()}
   document.body.classList.remove('m-lite','selling','login-mode');document.body.classList.add('m-app','tpv-mode');$('#user-switch').hidden=false;
   if(view==='pos')mOrder();else mTables()};
@@ -41,8 +42,8 @@ function mTables(){if(!mCenter||!state.centers.some(c=>c.id===mCenter))mCenter=s
   const direct=state.orders.filter(o=>!o.table_id);
   $('#main').innerHTML=mTop(`<button class="m-avatar" data-m="menu" aria-label="Menú">${mInitials(currentUser.name)}</button>`,'Mesas',`${occupied} ocupadas · ${euro(pending)} pendiente`,`<button class="m-icon ${state.clock?.working?'on':''}" data-m="clock" aria-label="Fichar">⏱</button>`)+
   `<div class="m-body"><div class="m-chips">${state.centers.map(c=>{const n=state.orders.filter(o=>state.tables.find(t=>t.id===o.table_id)?.center_id===c.id).length;return `<button class="m-chip ${c.id===mCenter?'active':''}" data-m="center" data-id="${c.id}">${esc(c.name)}${n?` <b>${n}</b>`:''}</button>`}).join('')}</div>
-  <div class="m-table-grid">${tables.map(t=>{const o=state.orders.find(o=>o.table_id===t.id);const late=o&&o.minutes_open>=90,cook=o&&o.lines.some(l=>l.kitchen==='pending'),ready=o&&o.lines.some(l=>l.kitchen==='ready'&&l.menu_role!=='parent');
-    return `<button class="m-table ${o?'busy':''} ${late?'late':''}" data-m="table" data-id="${t.id}"><span class="m-table-name">${esc(t.name)}</span>${o?`<span class="m-table-total">${euro(o.due)}</span><span class="m-table-meta">${o.guests?'👥'+o.guests+' · ':''}${minutesLabel(o.minutes_open)}</span>${cook?'<i class="m-dot cook" title="En cocina">♨</i>':ready?'<i class="m-dot ready" title="Listo">✓</i>':''}`:`<span class="m-table-free">Libre · ${t.seats||4} pl.</span>`}</button>`}).join('')}</div>
+  <div class="m-table-grid">${tables.map(t=>{const o=state.orders.find(o=>o.table_id===t.id);const late=o&&o.minutes_open>=90,billing=o&&o.bill_requested_at,cook=o&&o.lines.some(l=>l.kitchen==='pending'),ready=o&&o.lines.some(l=>l.kitchen==='ready'&&l.menu_role!=='parent');
+    return `<button class="m-table ${o?'busy':''} ${late?'late':''} ${billing?'billing':''}" data-m="table" data-id="${t.id}"><span class="m-table-name">${esc(t.name)}</span>${o?`<span class="m-table-total">${euro(o.due)}</span><span class="m-table-meta">${o.guests?'👥'+o.guests+' · ':''}${minutesLabel(o.minutes_open)}</span>${o.bill_requested_at?'<i class="m-dot bill" title="Pide la cuenta">🧾</i>':cook?'<i class="m-dot cook" title="En cocina">♨</i>':ready?'<i class="m-dot ready" title="Listo">✓</i>':''}`:`<span class="m-table-free">Libre · ${t.seats||4} pl.</span>`}</button>`}).join('')}</div>
   ${direct.length?`<h2 class="m-h2">Ventas directas</h2><div class="m-list">${direct.map(o=>`<button class="m-row" data-m="order" data-id="${o.id}"><span class="m-row-icon">${({llevar:'🛍',domicilio:'🛵',barra:'🍺'})[o.service_type]||'🧾'}</span><span class="m-row-main"><b>${esc(o.table_name||'Cuenta #'+o.id)}</b><small>${o.lines.length} líneas · ${minutesLabel(o.minutes_open)}</small></span><b>${euro(o.due)}</b></button>`).join('')}</div>`:''}</div>
   <nav class="m-bottom"><button class="m-bottom-btn" data-m="direct"><span>＋</span>Venta rápida</button><button class="m-bottom-btn" data-m="takeaway"><span>🛍</span>Para llevar</button><button class="m-bottom-btn" data-m="kitchen"><span>♨</span>Cocina</button></nav>`}
 
@@ -69,13 +70,17 @@ function mOrder(){const o=order();if(!o){go('tables');return}
     ${!mFamily.startsWith('__')?`<div class="m-chips small">${state.categories.filter(c=>!mFamily||c.parent===mFamily).map(c=>`<button class="m-chip ${mCategory===c.id?'active':''}" data-m="category" data-id="${c.id}" style="--tile:${tileColor(c.id)}"><i class="dot"></i>${esc(c.name)}</button>`).join('')}</div>`:''}
     <div id="m-products">${mProducts()}</div>`:mLines(o)}</div>
   <nav class="m-bottom m-order-bar"><div class="m-total"><small>${o.paid?'Pendiente':'Total'}</small><b>${euro(o.due)}</b></div>
-    ${newCount&&can('ticket_send')?`<button class="m-cta" data-m="send">♨ Enviar a cocina <b>${newCount}</b></button>`:o.lines.length&&!actionDisabled('payments')?`<button class="m-cta pay" data-m="pay">€ Cobrar</button>`:`<button class="m-cta ghost" data-m="tab" data-tab="${mTab==='carta'?'cuenta':'carta'}">${mTab==='carta'?'Ver cuenta':'Añadir productos'}</button>`}</nav>`;
+    ${(()=>{const canPay=o.lines.length&&!actionDisabled('payments'),canSend=newCount&&can('ticket_send');
+      if(canSend&&canPay)return `<button class="m-cta" data-m="send">♨ Enviar <b>${newCount}</b></button><button class="m-cta pay compact" data-m="pay" aria-label="Cobrar">€</button>`;
+      if(canSend)return `<button class="m-cta" data-m="send">♨ Enviar a cocina <b>${newCount}</b></button>`;
+      if(canPay)return `<button class="m-cta pay" data-m="pay">€ Cobrar</button>`;
+      return `<button class="m-cta ghost" data-m="tab" data-tab="${mTab==='carta'?'cuenta':'carta'}">${mTab==='carta'?'Ver cuenta':'Añadir productos'}</button>`})()}</nav>`;
   const s=$('#m-search');if(s)s.oninput=e=>{mQuery=e.target.value;$('#m-products').innerHTML=mProducts()};
   if(o.table_id&&!o.lines.length&&o.guests==null&&typeof askedGuests!=='undefined'&&!askedGuests.has(o.id)&&!$('#modal').open){askedGuests.add(o.id);guestsDialog(true)}}
 
 /* ---------- Hojas de opciones ---------- */
 function mSheet(title,items){openModal(modalTitle(title)+`<div class="m-sheet">${items.map(([id,icon,label,disabled])=>`<button class="m-sheet-btn" data-m="sheet" data-id="${id}" ${disabled?'disabled':''}><span>${icon}</span>${esc(label)}</button>`).join('')}</div>`)}
-function mMoreSheet(){const items=[['guests','👥','Comensales'],['customer','👤','Cliente'],['service','🛵','Tipo de servicio'],['move','⇄','Cambiar de mesa'],['merge','⊕','Unir cuentas'],['invite','♡','Invitar'],['ticket_discount','%','Descuento de ticket'],['receipt','▤','Ver / imprimir cuenta'],['payments','€','Cobrar o dividir'],['cancel_ticket','✕','Cancelar ticket']];
+function mMoreSheet(){const items=[['repeat_round','↻','Repetir ronda'],['bill_request','🧾',order()?.bill_requested_at?'Quitar «pide la cuenta»':'Pide la cuenta'],['guests','👥','Comensales'],['customer','👤','Cliente'],['service','🛵','Tipo de servicio'],['move','⇄','Cambiar de mesa'],['merge','⊕','Unir cuentas'],['invite','♡','Invitar'],['ticket_discount','%','Descuento de ticket'],['receipt','▤','Ver / imprimir cuenta'],['payments','€','Cobrar o dividir'],['cancel_ticket','✕','Cancelar ticket']];
   mSheet('Opciones de la cuenta',items.map(([id,i,l])=>[id,i,l,actionDisabled(id)]))}
 function mMenuSheet(){mSheet(currentUser.name,[['nav:kitchen','♨','Cocina y barra'],['nav:customers','👥','Clientes'],['clock','⏱',state.clock?.working?'Fichar salida':'Fichar entrada'],['theme','🌓','Tema claro / oscuro'],['switch_user','↪','Cambiar de usuario']])}
 
@@ -119,3 +124,21 @@ const mobilePrevPos=renderPos,mobilePrevTables=renderTables;
 function mEnter(){document.body.classList.remove('m-lite','selling','login-mode');document.body.classList.add('m-app','tpv-mode')}
 renderPos=function(){if(isMobile()&&state&&currentUser&&order()){mEnter();return mOrder()}return mobilePrevPos()};
 renderTables=function(){if(isMobile()&&state&&currentUser){mEnter();return mTables()}return mobilePrevTables()};
+
+/* Cobro desde el móvil: solo si el administrador lo permite (Otros → Comandero móvil). */
+const payPrevDisabled=actionDisabled;
+actionDisabled=function(id){if(['payments','split_pay'].includes(id)&&state?.lan&&!state.lan_allow_pay)return true;return payPrevDisabled(id)};
+
+/* ---------- Repetir ronda y «pide la cuenta» (TPV y móvil) ---------- */
+function lastRound(o){const sent=o.lines.filter(l=>l.sent_at&&l.menu_role!=='item'&&l.menu_role!=='parent'&&!l.is_weighed);
+  if(!sent.length)return o.lines.filter(l=>!l.menu_role&&!l.is_weighed);const last=sent.map(l=>l.sent_at).sort().pop();return sent.filter(l=>l.sent_at===last)}
+async function repeatRound(){const o=order();if(!o)return;const items=lastRound(o);if(!items.length){toast('No hay ronda que repetir.',true);return}
+  openModal(modalTitle('Repetir ronda','Se vuelven a añadir estos productos, sin enviar todavía.')+`<div class="m-list">${items.map(l=>`<div class="m-row"><span class="m-row-icon">${l.qty}×</span><span class="m-row-main"><b>${esc(l.name)}</b><small>${esc(l.format)}${l.extras.length?' + '+l.extras.map(e=>esc(e.name)).join(', '):''}</small></span><b>${euro(l.qty*(l.base_price??l.price))}</b></div>`).join('')}</div><div class="form-actions"><button class="button secondary" data-close>Cancelar</button><button class="button primary" id="repeat-go">↻ Repetir ronda</button></div>`);
+  $('#repeat-go').onclick=async()=>{$('#repeat-go').disabled=true;for(const l of items){await change('add',{order_id:o.id,format_id:l.format_id,qty:l.qty,extras:l.extras.map(e=>e.id).filter(Boolean),note:l.note||''})}closeModal();toast('Ronda repetida: '+items.reduce((s,l)=>s+l.qty,0)+' productos');vibrate(20)}}
+async function billRequest(){const o=order();if(!o)return;const on=!o.bill_requested_at;
+  const r=await change('bill_request',{order_id:o.id,requested:on},on?'Mesa marcada: pide la cuenta':'Aviso de cuenta retirado');
+  if(r&&on&&can('ticket_print')){try{const p=await api('print_document',{kind:'receipt',order_id:o.id});if(p.configured)toast(p.print_warnings?.length?p.print_warnings.join(' · '):'Cuenta impresa',!!p.print_warnings?.length)}catch(e){}}}
+const roundPrevDisabled=actionDisabled;
+actionDisabled=function(id){const o=order();if(id==='repeat_round')return !o||!can('ticket_add')||!!o.paid||!lastRound(o).length;if(id==='bill_request')return !o||!o.lines.length||!can('ticket_open');return roundPrevDisabled(id)};
+const roundPrevExecute=executeAction;
+executeAction=async function(id){if(id==='repeat_round'){closeModal();return repeatRound()}if(id==='bill_request'){closeModal();return billRequest()}return roundPrevExecute(id)};

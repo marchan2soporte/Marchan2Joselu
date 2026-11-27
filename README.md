@@ -1,4 +1,4 @@
-# Marchan2 0.26 — JoseluIA
+# Marchan2 0.27 — JoseluIA
 
 Copia de desarrollo **Marchan2Joselu**, creada el 26/10/2026 a partir de [Marchan2Pedro](https://github.com/marchan2soporte/Marchan2Pedro) en la base 0.21. Conserva el historial original; los cambios de esta copia se publican en Marchan2Joselu. Consulta [BASE_PEDRO.md](BASE_PEDRO.md) para el resumen de la revisión.
 
@@ -10,6 +10,19 @@ En Administración → Puntos de venta puedes configurar varios puestos y activa
 En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El papel de 80 mm admite inicialmente 48 columnas; puedes ajustar columnas, líneas de avance y corte por destino. Prueba primero «Sin corte» y después «Corte parcial» solo si el equipo dispone de cortador ESC/POS compatible. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. Los informes X/Z de jornada se abren desde Caja y jornada; usan el destino de impresión de Z del puesto. El antiguo resumen de prueba por fecha se conserva como compatibilidad interna, separado de los cierres nuevos.
 Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y en Windows 10 actualizado); no requiere instalar Python ni conexión a Internet. Si WebView2 no está disponible, la aplicación se abre en el navegador como antes.
+
+## Novedades 0.27 · impresión con diseño, cobro desde el móvil y rondas
+
+- **Tickets que salen igual que la vista previa.** Nuevo motor de impresión con una sola maqueta:
+  - Impresoras con controlador de Windows: fuente monoespaciada ajustada al ancho del papel, negritas, tamaños grandes, alineación, líneas separadoras y logotipo.
+  - Impresoras térmicas en RAW («Generic / Text Only»): mismas opciones con comandos ESC/POS (alineación, negrita, doble tamaño, logotipo en trama y corte).
+- **Plantillas con diseño** (Administración → Plantillas de ticket): alineación de cabecera y pie, nombre y TOTAL en grande, tipo de separador y logotipo PNG impreso. La vista previa **«Impresión exacta»** es la imagen que se envía a la impresora. «Ver cuenta» en el TPV y en el móvil también muestra el ticket tal cual se imprime.
+- **Comanda de cocina más legible**: mesa y platos en grande y notas destacadas.
+- **Impresión más rápida**: antes se consultaba el controlador con PowerShell en cada impresión (unos 5 s en este equipo); ahora se usa la API de Windows (0,05 s la primera vez y en caché después).
+- **Cobro desde el móvil, opcional**: en el TPV, Otros → Comandero móvil → «Permitir cobrar desde el móvil». Desactivado por defecto: el servidor rechaza el cobro desde los móviles si no está activado. Se ha corregido el fallo que impedía cobrar por wifi (`crypto.randomUUID` solo existe en HTTPS). Si hay productos sin enviar, la barra muestra «Enviar» y «€» a la vez.
+- **PIN con el teclado del programa**: en móviles y pantallas táctiles el PIN y el código de emparejamiento no abren el teclado del sistema. Las notas siguen usando el teclado del móvil.
+- **Repetir ronda** (↻): vuelve a añadir la última ronda enviada de la mesa con un toque, tras confirmar.
+- **Pide la cuenta** (🧾): marca la mesa en azul en el plano y en el móvil, y si hay impresora de tickets, imprime la cuenta.
 
 ## Novedades 0.26 · comandero móvil táctil
 
@@ -124,7 +137,7 @@ Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de dato
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-101 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+106 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
 Fuentes: Python, SQLite, pywebview y HTML/CSS/JS locales. El diseño está en web/theme.css (variables de color, modo oscuro y pantalla de venta).
 Dependencias: python -m pip install -r requirements.txt
 Ejecutar: python tpv.py / python admin.py (añade --browser para usar el navegador o --fullscreen para pantalla completa)

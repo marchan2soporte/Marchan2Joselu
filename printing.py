@@ -8,6 +8,8 @@ from ctypes import wintypes
 from datetime import datetime
 import json
 import subprocess
+import re
+import ticket_print
 import sys
 import textwrap
 
@@ -175,24 +177,33 @@ def delete_kitchen(store, data):
     return {'ok': True}
 
 
-def _format_kitchen(order, items, route_name):
-    width = 48
-    lines = ['MARCHAN2  /  PREPARACIÓN', route_name.upper(), '=' * width,
-             f"PEDIDO #{order['id']:04d}",
-             f"MESA: {order['table_name'] or 'VENTA DIRECTA'}",
-             f"PERSONAL: {order.get('user_name') or 'Sin asignar'}",
-             datetime.now().strftime('%d/%m/%Y  %H:%M'), '-' * width]
+def kitchen_doc(order, items, route_name):
+    B = [{'t': 'text', 'text': route_name.upper(), 'align': 'center', 'bold': True},
+         {'t': 'text', 'text': order['table_name'] or 'VENTA DIRECTA', 'align': 'center', 'bold': True, 'large': True},
+         {'t': 'text', 'text': f"PEDIDO #{order['id']:04d}" + (f"  ·  {order['guests']} COMENSALES" if order.get('guests') else ''), 'align': 'center'},
+         {'t': 'text', 'text': f"{order.get('user_name') or 'Sin asignar'} · " + datetime.now().strftime('%d/%m/%Y  %H:%M'), 'align': 'center'},
+         {'t': 'sep', 'char': '='}]
     for course in dict.fromkeys(item['course'] for item in items):
-        lines.append(f"[ {course.upper()} ]")
+        B.append({'t': 'text', 'text': f"[ {course.upper()} ]", 'align': 'left', 'bold': True})
         for item in (item for item in items if item['course'] == course):
-            lines.append(f"{item['qty']:>3} x  {item['name']}")
-            if item['format']: lines.append(f"       {item['format']}")
-            if item.get('weight_label'):lines.append('       '+item['weight_label'])
-            lines.extend(f"       + {extra['name']}" for extra in item['extras'])
-            if item['note']: lines.append(f"       NOTA: {item['note']}")
-        lines.append('-' * width)
-    lines.append('COMANDA INTERNA · SIN PRECIOS')
-    return '\n'.join(lines)
+            B.append({'t': 'text', 'text': f"{item['qty']} x {item['name']}", 'align': 'left', 'bold': True, 'large': True})
+            if item['format'] and not item['format'].startswith('MENÚ'):
+                B.append({'t': 'text', 'text': '     ' + item['format']})
+            elif item['format']:
+                B.append({'t': 'text', 'text': '     ' + item['format']})
+            if item.get('weight_label'):
+                B.append({'t': 'text', 'text': '     ' + item['weight_label']})
+            for extra in item['extras']:
+                B.append({'t': 'text', 'text': f"     + {extra['name']}"})
+            if item['note']:
+                B.append({'t': 'text', 'text': f"  >> {item['note']}", 'bold': True})
+        B.append({'t': 'sep', 'char': '-'})
+    B.append({'t': 'text', 'text': 'COMANDA INTERNA · SIN PRECIOS', 'align': 'center'})
+    return {'marchan2_doc': 1, 'width': 48, 'blocks': B}
+
+
+def _format_kitchen(order, items, route_name):
+    return ticket_print.to_text(kitchen_doc(order, items, route_name))
 
 
 def enqueue_kitchen(c, store, order_id, line_ids):
@@ -215,7 +226,7 @@ def enqueue_kitchen(c, store, order_id, line_ids):
                          (line['id'], route['id'])).fetchone(): continue
             items.append(line)
         if items:
-            payload = _format_kitchen(order, items, route['name'])
+            payload = ticket_print.dumps(kitchen_doc(order, items, route['name']))
             job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,backend,
                 raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?)''',
                 (datetime.now().isoformat(timespec='seconds'), 'kitchen', route['printer_name'], 1, payload,
@@ -225,29 +236,59 @@ def enqueue_kitchen(c, store, order_id, line_ids):
                           (line['id'], route['id'], job))
 
 
-def _format_receipt(order, company, template=None, categories=None):
-    """Text equivalent of the shared browser preview for text-only queues."""
+def template_width(template):
+    base = str((template or {}).get('base', '80 mm'))
+    match = re.search(r'(\d+) caracteres', base)
+    if match:
+        return int(match.group(1))
+    return 32 if base.startswith('56 mm') else 64 if base == 'A4' else 48
+
+
+def receipt_doc(order, company, template=None, categories=None):
+    """Maqueta del ticket compartida por la vista previa, RAW (ESC/POS) y Windows."""
     template = template or {}
     show = lambda key, default=1: bool(template.get(key, default))
-    width = 32 if str(template.get('base', '')).startswith('56 mm') else 48
-    separator = '-' * width
-    amount = lambda cents: f'{cents / 100:.2f} EUR'
-    aligned = lambda label, value: label[:max(1, width-len(value)-1)].ljust(max(1, width-len(value))) + value
-    lines = (template.get('header') or company.get('trade_name') or
-             company.get('legal_name') or 'MARCHAN2').splitlines()
-    if company.get('tax_id'): lines.append('CIF: ' + company['tax_id'])
-    if company.get('address'): lines.append(company['address'])
-    lines.extend([separator, 'JUSTIFICANTE DE VENTA', 'DOCUMENTO DE PRUEBA · NO FISCAL', separator])
+    width = template_width(template)
+    sep = template.get('separator') or '-'
+    halign = template.get('header_align') or 'center'
+    falign = template.get('footer_align') or 'center'
+    big_header = bool(template.get('header_large', 1))
+    big_total = bool(template.get('total_large', 1))
+    B = []
+    text = lambda t, align='left', bold=False, large=False: B.append({'t': 'text', 'text': t, 'align': align, 'bold': bold, 'large': large})
+    pair = lambda l, r, bold=False, large=False: B.append({'t': 'pair', 'left': l, 'right': r, 'bold': bold, 'large': large})
+    line = lambda: B.append({'t': 'sep', 'char': sep})
+    if template.get('header_image') and template.get('print_logo', 1):
+        B.append({'t': 'image', 'data': template['header_image']})
+    heading = (template.get('header') or company.get('trade_name') or company.get('legal_name') or 'MARCHAN2').splitlines()
+    for i, h in enumerate(heading):
+        text(h, halign, bold=True, large=big_header and i == 0)
+    if company.get('tax_id'):
+        text('CIF: ' + company['tax_id'], halign)
+    if company.get('address'):
+        text(company['address'], halign)
+    line()
+    text('JUSTIFICANTE DE VENTA', 'center', bold=True)
+    text('DOCUMENTO DE PRUEBA · NO FISCAL', 'center')
+    line()
     if order.get('series_number'):
-        lines.append(f"Referencia interna: {order.get('series_name') or ''}-{order['series_number']}")
+        text(f"Referencia interna: {order.get('series_name') or ''}-{order['series_number']}")
     identity = []
-    if show('show_order_id'): identity.append(f"Cuenta #{order['id']:04d}")
-    if show('show_location'): identity.append(order['table_name'] or 'VENTA DIRECTA')
-    if identity: lines.append(' · '.join(identity))
-    date = order['paid_at'] or order['created']
-    lines.append(date if show('show_time') else date[:10])
-    if show('show_unpaid') and order['due'] > 0: lines.append('PENDIENTE DE COBRO')
-    lines.extend([separator, aligned('UDS  PRODUCTO', 'IMPORTE'), separator])
+    if show('show_order_id'):
+        identity.append(f"Cuenta #{order['id']:04d}")
+    if show('show_location'):
+        identity.append(order['table_name'] or 'VENTA DIRECTA')
+    if identity:
+        text(' · '.join(identity), bold=True)
+    stamp = (order['paid_at'] or order['created']).replace('T', ' ')
+    text(stamp if show('show_time') else stamp[:10])
+    if order.get('guests'):
+        text(f"Comensales: {order['guests']}")
+    if show('show_unpaid') and order['due'] > 0:
+        text('PENDIENTE DE COBRO', 'center', bold=True)
+    line()
+    pair('UDS  PRODUCTO', 'IMPORTE', bold=True)
+    line()
     items = list(order['lines'])
     if template.get('line_order') == 'Nombre':
         items.sort(key=lambda item: item['name'].casefold())
@@ -255,33 +296,102 @@ def _format_receipt(order, company, template=None, categories=None):
         items.sort(key=lambda item: (categories.get(item['product_id'], '').casefold(), item['id']))
     taxes = {}
     for item in items:
-        lines.append(aligned(f"{item['qty']} x {item['name']}", amount(item['qty'] * item['price'])))
-        detail = item['format']
-        if item.get('weight_label'):detail+=' · '+item['weight_label']+' x '+amount(item['reference_price'])+' / KG'
-        if item.get('discount_label'):detail+=' · '+item['discount_label']
-        if item['extras']: detail += ' + ' + ', '.join(extra['name'] for extra in item['extras'])
-        if show('show_unit_price', 0): detail += f" · {amount(item['price'])} / ud."
-        if show('show_item_tax', 0): detail += f" · IVA {item['tax']}%"
-        lines.append('  ' + detail)
-        if show('show_notes', 0) and item['note']: lines.append('  Nota: ' + item['note'])
+        sub = item.get('menu_role') == 'item'
+        pair(('   · ' if sub else f"{item['qty']} x ") + item['name'], '' if sub else {'m': item['qty'] * item['price']})
+        detail = '' if sub else item['format']
+        if item.get('weight_label'):
+            detail += ' · ' + item['weight_label']
+        if item.get('discount_label'):
+            detail += ' · ' + item['discount_label']
+        if item['extras']:
+            detail += ' + ' + ', '.join(extra['name'] for extra in item['extras'])
+        if show('show_unit_price', 0) and not sub:
+            detail += f" · {item['price'] / 100:.2f} / ud.".replace('.', ',')
+        if show('show_item_tax', 0) and not sub:
+            detail += f" · IVA {item['tax']}%"
+        if detail.strip(' ·'):
+            text('    ' + detail.strip())
+        if show('show_notes', 0) and item['note']:
+            text('    Nota: ' + item['note'])
         taxes[item['tax']] = taxes.get(item['tax'], 0) + item['qty'] * item['price']
-    lines.extend([separator, aligned('TOTAL PRODUCTOS', amount(order['total']))])
+    line()
+    pair('TOTAL' if big_total else 'TOTAL PRODUCTOS', {'m': order['total']}, bold=True, large=big_total)
     if show('show_tax'):
-        for rate, gross in taxes.items():
-            tax = gross - int(gross / (1 + rate / 100) + 0.5)
-            lines.append(aligned(f"IVA {rate}% incluido", amount(tax)))
-    lines.append(separator)
+        for rate, gross in sorted(taxes.items()):
+            base = (gross * 100 + (100 + rate) // 2) // (100 + rate)
+            pair(f'  Base {rate}%  {base / 100:.2f}'.replace('.', ','), {'m': gross - base})
+    if order['payments']:
+        line()
     for payment in order['payments']:
         label = 'EFECTIVO' if payment['method'] == 'cash' else 'TARJETA'
-        if show('show_user') and payment.get('user_name'): label += ' · ' + payment['user_name']
-        lines.append(aligned(label, amount(payment['amount'])))
+        if show('show_user') and payment.get('user_name'):
+            label += ' · ' + payment['user_name']
+        pair(label, {'m': payment['amount']})
         if show('show_tips') and payment.get('tip'):
-            lines.append(aligned('Propina', amount(payment['tip'])))
+            pair('  Propina', {'m': payment['tip']})
         if payment['method'] == 'cash':
-            lines.append(f"Recibido {amount(payment['tendered'])} · Cambio {amount(payment['change_due'])}")
-    lines.extend([aligned('PENDIENTE', amount(order['due'])), separator])
-    lines.extend((template.get('footer') or 'Gracias por compartir mesa.\nMarchan2 · JoseluIA').splitlines())
-    return '\n'.join(lines)
+            pair('  Entregado', {'m': payment['tendered']})
+            pair('  Cambio', {'m': payment['change_due']})
+    if order['due'] > 0:
+        pair('PENDIENTE', {'m': order['due']}, bold=True)
+    line()
+    for f in (template.get('footer') or 'Gracias por compartir mesa.\nMarchan2 · JoseluIA').splitlines():
+        text(f, falign)
+    if template.get('footer_image') and template.get('print_logo', 1):
+        B.append({'t': 'image', 'data': template['footer_image']})
+    return {'marchan2_doc': 1, 'width': width, 'blocks': B}
+
+
+def _format_receipt(order, company, template=None, categories=None):
+    """Texto plano equivalente (compatibilidad y pruebas)."""
+    doc = receipt_doc(order, company, template, categories)
+    for b in doc['blocks']:
+        if b['t'] == 'pair' and b['left'] == 'UDS  PRODUCTO':
+            b['left'] = 'UDS  PRODUCTO'
+    return ticket_print.to_text(doc)
+
+
+def active_template(c):
+    if not c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ticket_templates'").fetchone():
+        return None
+    from pos_profiles import active_options
+    chosen = active_options(c).get('receipt_template_id')
+    row = c.execute('SELECT * FROM ticket_templates WHERE id=?', (chosen,)).fetchone() if chosen else \
+        c.execute('SELECT * FROM ticket_templates WHERE is_default=1 ORDER BY id LIMIT 1').fetchone()
+    return dict(row) if row else None
+
+
+def _categories(c):
+    return {row['id']: row['category_name'] for row in c.execute(
+        'SELECT p.id,c.name category_name FROM products p JOIN categories c ON c.id=p.category_id')}
+
+
+SAMPLE_ORDER = {'id': 27, 'table_name': 'MESA 4', 'status': 'paid', 'created': '2026-11-27T13:05:00', 'paid_at': '2026-11-27T13:58:00',
+                'guests': 2, 'series_number': None, 'total': 3350, 'due': 0,
+                'lines': [{'id': 1, 'product_id': 0, 'qty': 2, 'name': 'CAFÉ CON LECHE', 'price': 190, 'format': 'TAZA', 'extras': [], 'tax': 10, 'note': 'SIN AZÚCAR'},
+                          {'id': 2, 'product_id': 0, 'qty': 1, 'name': 'TOSTADA CON TOMATE Y JAMÓN', 'price': 450, 'format': 'MEDIA', 'extras': [{'name': 'ACEITE DE OLIVA'}], 'tax': 10, 'note': ''},
+                          {'id': 3, 'product_id': 0, 'qty': 1, 'name': 'MENÚ DEL DÍA', 'price': 1450, 'format': 'COMPLETO', 'extras': [], 'tax': 10, 'note': '', 'menu_role': 'parent'},
+                          {'id': 4, 'product_id': 0, 'qty': 1, 'name': 'CARRILLADA', 'price': 0, 'format': 'MENÚ · SEGUNDOS', 'extras': [], 'tax': 10, 'note': '', 'menu_role': 'item'},
+                          {'id': 5, 'product_id': 0, 'qty': 1, 'name': 'COPA DE VINO BLANCO', 'price': 870, 'format': 'COPA', 'extras': [], 'tax': 21, 'note': '', 'discount_label': 'DTO 10,00 %'}],
+                'payments': [{'method': 'cash', 'amount': 3350, 'tip': 150, 'tendered': 4000, 'change_due': 500, 'user_name': 'ANA'}]}
+
+
+def render_preview(store, template=None, order_id=None):
+    """Imagen exacta de impresión (Windows) y texto equivalente, para la vista previa."""
+    from company import read as read_company
+    with store.db() as c:
+        if order_id is not None:
+            order = store.order(c, int(order_id))
+            template = active_template(c)
+        else:
+            order = SAMPLE_ORDER
+        categories = _categories(c) if template and template.get('line_order') == 'Categoría' else {}
+    doc = receipt_doc(order, read_company(store), template, categories)
+    try:
+        image = ticket_print.render_png(doc)
+    except Exception:
+        image = None
+    return {'image': image, 'text': ticket_print.to_text(doc), 'width': doc['width']}
 
 
 def enqueue_receipt(store, order_id, automatic=False):
@@ -296,18 +406,9 @@ def enqueue_receipt(store, order_id, automatic=False):
         order = store.order(c, order_id)
         if automatic and order['status'] != 'paid': return {'configured': False}
         key = f"receipt:{order_id}" if automatic else None
-        template = None
-        if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ticket_templates'").fetchone():
-            from pos_profiles import active_options
-            chosen = active_options(c).get('receipt_template_id')
-            row = c.execute('SELECT * FROM ticket_templates WHERE id=?', (chosen,)).fetchone() if chosen else \
-                  c.execute('SELECT * FROM ticket_templates WHERE is_default=1 ORDER BY id LIMIT 1').fetchone()
-            template = dict(row) if row else None
-        categories = {}
-        if template and template.get('line_order') == 'Categoría':
-            categories = {row['id']: row['category_name'] for row in c.execute('''SELECT p.id,c.name category_name
-                FROM products p JOIN categories c ON c.id=p.category_id''')}
-        payload = _format_receipt(order, read_company(store), template, categories)
+        template = active_template(c)
+        categories = _categories(c) if template and template.get('line_order') == 'Categoría' else {}
+        payload = ticket_print.dumps(receipt_doc(order, read_company(store), template, categories))
         try:
             job = c.execute('''INSERT INTO print_jobs(created,kind,printer_name,copies,payload,unique_key,backend,
                 raw_columns,feed_lines,cut_mode) VALUES(?,?,?,?,?,?,?,?,?,?)''',
@@ -355,45 +456,10 @@ def enqueue_text_to_printer(store, printer_name, text, backend='auto', raw_colum
 
 
 def print_gdi(printer_name, text, copies=1):
-    if sys.platform != 'win32': raise ValueError('La impresión directa requiere Windows.')
-    gdi = ctypes.WinDLL('gdi32', use_last_error=True)
-    gdi.CreateDCW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, ctypes.c_void_p]
-    gdi.CreateDCW.restype = ctypes.c_void_p
-    gdi.StartDocW.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-    gdi.StartPage.argtypes = [ctypes.c_void_p]
-    gdi.EndPage.argtypes = [ctypes.c_void_p]
-    gdi.EndDoc.argtypes = [ctypes.c_void_p]
-    gdi.DeleteDC.argtypes = [ctypes.c_void_p]
-    gdi.TextOutW.argtypes = [ctypes.c_void_p, wintypes.INT, wintypes.INT, wintypes.LPCWSTR, wintypes.INT]
-    hdc = gdi.CreateDCW('WINSPOOL', printer_name, None, None)
-    if not hdc: raise ValueError('Windows no pudo abrir la impresora seleccionada.')
-    class DOCINFO(ctypes.Structure):
-        _fields_ = [('cbSize', wintypes.INT), ('lpszDocName', wintypes.LPCWSTR),
-                    ('lpszOutput', wintypes.LPCWSTR), ('lpszDatatype', wintypes.LPCWSTR),
-                    ('fwType', wintypes.DWORD)]
-    doc = DOCINFO(ctypes.sizeof(DOCINFO), 'Marchan2 · impresión de prueba', None, None, 0)
-    lines = text.splitlines()
-    try:
-        for _ in range(copies):
-            if gdi.StartDocW(hdc, ctypes.byref(doc)) <= 0: raise ValueError('Windows rechazó el trabajo de impresión.')
-            try:
-                if gdi.StartPage(hdc) <= 0: raise ValueError('Windows no pudo iniciar la página.')
-                y = 100
-                for line in lines:
-                    if y > 2900:
-                        gdi.EndPage(hdc)
-                        if gdi.StartPage(hdc) <= 0: raise ValueError('Windows no pudo continuar la impresión.')
-                        y = 100
-                    if not gdi.TextOutW(hdc, 100, y, line, len(line)):
-                        raise ValueError('Windows no pudo dibujar el documento en la impresora.')
-                    y += 38
-                if gdi.EndPage(hdc) <= 0:
-                    raise ValueError('Windows no pudo finalizar la página.')
-            finally:
-                if gdi.EndDoc(hdc) <= 0:
-                    raise ValueError('Windows no pudo completar el trabajo de impresión.')
-    finally:
-        gdi.DeleteDC(hdc)
+    """Windows: fuente monoespaciada ajustada al ancho del papel, negritas, tamaños y alineación."""
+    doc = ticket_print.loads(text) if ticket_print.is_doc(text) else \
+        ticket_print.text_doc(text, max(32, min(64, max((len(line) for line in text.splitlines()), default=48))))
+    ticket_print.print_gdi_doc(printer_name, doc, copies)
 
 
 def _raw_bytes(text, raw_columns=48, feed_lines=4, cut_mode='none'):
@@ -439,7 +505,8 @@ def print_raw(printer_name, text, copies=1, raw_columns=48, feed_lines=4, cut_mo
     handle = wintypes.HANDLE()
     if not spool.OpenPrinterW(printer_name, ctypes.byref(handle), None):
         raise ValueError(f'Windows no pudo abrir la cola de impresión ({ctypes.get_last_error()}).')
-    payload = _raw_bytes(text, raw_columns, feed_lines, cut_mode)
+    payload = ticket_print.escpos(ticket_print.loads(text), raw_columns, feed_lines, cut_mode) if ticket_print.is_doc(text) \
+        else _raw_bytes(text, raw_columns, feed_lines, cut_mode)
     buffer = ctypes.create_string_buffer(payload)
     doc = DOCINFO1('Marchan2 · texto RAW', None, 'RAW')
     try:
@@ -464,15 +531,10 @@ def print_raw(printer_name, text, copies=1, raw_columns=48, feed_lines=4, cut_mo
 
 
 def _printer_driver(printer_name):
-    script = ('Get-CimInstance Win32_Printer | Where-Object { $_.Name -eq ' +
-              "'" + printer_name.replace("'", "''") + "'" +
-              ' } | Select-Object -ExpandProperty DriverName')
+    """Controlador de la impresora con la API de Windows y en caché (antes: PowerShell, 1-3 s por impresión)."""
     try:
-        result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
-                                capture_output=True, text=True, timeout=10,
-                                creationflags=subprocess.CREATE_NO_WINDOW)
-        return result.stdout.strip() if result.returncode == 0 else ''
-    except (OSError, subprocess.TimeoutExpired):
+        return ticket_print.printer_driver(printer_name)
+    except Exception:
         return ''
 
 

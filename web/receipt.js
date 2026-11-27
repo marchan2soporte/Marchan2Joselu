@@ -20,8 +20,9 @@ function receiptBody(order,template,company={},catalog={}){
 function receiptDialog(order){
  const template=state?.ticket_template;
  const title=order.status==='paid'?'Cuenta cobrada':'Detalle de la cuenta';
- openModal(modalTitle(title)+`<div class="receipt">${receiptBody(order,template,state?.company||{},state||{})}</div><div class="form-actions"><button class="button secondary" data-close>Volver</button><button class="button primary" id="print-receipt">Imprimir prueba</button></div>`);
+ openModal(modalTitle(title)+`<div class="receipt-exact" id="receipt-exact" hidden></div><div class="receipt" id="receipt-html">${receiptBody(order,template,state?.company||{},state||{})}</div><div class="form-actions"><button class="button secondary" data-close>Volver</button><button class="button primary" id="print-receipt">Imprimir</button></div>`);
  const base=template?.base||'80 mm';
  $('#modal').dataset.paper=base==='A4'?'A4':base.startsWith('56 mm')?'56 mm':'80 mm';
- $('#print-receipt').onclick=async()=>{try{const result=await api('print_document',{kind:'receipt',order_id:order.id});if(!result.configured){window.print();return}toast(result.print_warnings?.length?result.print_warnings.join(' · '):'Ticket enviado a la impresora seleccionada',!!result.print_warnings?.length)}catch(error){toast(error.message,true)}};
+ api('ticket_render',{order_id:order.id}).then(r=>{if(!r.image||!$('#receipt-exact'))return;$('#receipt-exact').innerHTML=`<img src="${r.image}" alt="Ticket tal como se imprimirá">`;$('#receipt-exact').hidden=false;$('#receipt-html').hidden=true}).catch(()=>{});
+ $('#print-receipt').onclick=async()=>{const button=$('#print-receipt');button.disabled=true;button.textContent='Enviando…';try{const result=await api('print_document',{kind:'receipt',order_id:order.id});if(!result.configured){window.print();return}toast(result.print_warnings?.length?result.print_warnings.join(' · '):'Ticket enviado a la impresora seleccionada',!!result.print_warnings?.length)}catch(error){toast(error.message,true)}finally{button.disabled=false;button.textContent='Imprimir'}};
 }
