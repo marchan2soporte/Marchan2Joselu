@@ -1,6 +1,6 @@
 /* Marchan2 · Monitor de cocina: pensado para pantallas grandes, de lejos y con poca luz. */
 :root{--bg:#0b1416;--card:#fffdf7;--ink:#141414;--muted:#6d6d6d;--green:#22a77a;--warn:#e0a43a;--late:#d0533f;--bar:#13201f;color-scheme:dark;font-family:"Segoe UI",system-ui,sans-serif}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#e6efee;min-height:100dvh;overflow-x:hidden}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:#e6efee;min-height:100dvh;overflow-x:hidden}
 button,input,select{font:inherit}button{cursor:pointer;border:0;color:inherit;background:none}
 .kds-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:10px 16px;background:var(--bar);border-bottom:1px solid #26393a}
 .kds-brand{display:grid}.kds-brand b{font-size:20px}.kds-brand small{color:#8ea3a2;font-size:12px;letter-spacing:1px}

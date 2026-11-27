@@ -22,6 +22,7 @@ function play(kind,volume){const ctx=ensureAudio();if(!ctx||kind==='off'||!volum
   if(kind==='bell'){tone(1320,0,.9);tone(990,.25,.9)}else if(kind==='double'){tone(880,0,.15);tone(880,.22,.15);tone(1175,.44,.25)}else{tone(950,0,.25)}}
 if(audioCtx===null)$('#kds-unlock').hidden=false;
 $('#kds-unlock').onclick=()=>{ensureAudio();$('#kds-unlock').hidden=true};
+document.addEventListener('pointerdown',()=>{if(!$('#kds-unlock').hidden){ensureAudio();$('#kds-unlock').hidden=true}},{once:true});
 
 /* ---------- Emparejar y elegir monitor ---------- */
 function pairScreen(){clearTimeout(pollTimer);$('#kds-board').innerHTML=`<form class="kds-panel" id="pair"><h1>Emparejar pantalla</h1><p>Introduce el código de 6 cifras que aparece en Marchan2 Servidor.</p><label>Nombre de la pantalla<input id="pair-name" value="Pantalla cocina" maxlength="40"></label><label>Código<input id="pair-code" inputmode="numeric" maxlength="6" required></label><p class="err" id="pair-err"></p><button>Emparejar</button></form>`;

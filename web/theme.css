@@ -45,6 +45,7 @@
   color-scheme: dark;
 }
 
+[hidden] { display: none !important; }
 :root { font-family: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif; background: var(--bg); color: var(--ink); }
 body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; user-select: none; }
 input, textarea, [contenteditable] { user-select: text; }

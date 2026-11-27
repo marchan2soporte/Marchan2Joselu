@@ -99,7 +99,8 @@ class KitchenServerTests(unittest.TestCase):
         self.assertEqual((server_config.read(self.folder)['port'], server_config.read(self.folder)['listen']), (8811, '127.0.0.1'))
 
     def test_background_server_starts_once_and_stops(self):
-        import json, re, time, urllib.request
+        import json, os, re, time, urllib.request
+        os.environ['MARCHAN2_SIN_ICONO'] = '1'  # sin icono en la bandeja durante las pruebas
         server_config.ensure(self.folder, 8893)
         cfg = server_config.path(self.folder)
         cfg.write_text(cfg.read_text(encoding='utf-8').replace('escuchar = 0.0.0.0', 'escuchar = 127.0.0.1'), encoding='utf-8')

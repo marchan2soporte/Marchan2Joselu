@@ -1,4 +1,4 @@
-# Marchan2 0.28 — JoseluIA
+# Marchan2 0.29 — JoseluIA
 
 Copia de desarrollo **Marchan2Joselu**, creada el 26/10/2026 a partir de [Marchan2Pedro](https://github.com/marchan2soporte/Marchan2Pedro) en la base 0.21. Conserva el historial original; los cambios de esta copia se publican en Marchan2Joselu. Consulta [BASE_PEDRO.md](BASE_PEDRO.md) para el resumen de la revisión.
 
@@ -10,6 +10,12 @@ En Administración → Puntos de venta puedes configurar varios puestos y activa
 En Plantillas de ticket, la vista previa usa el mismo formato que «Ver cuenta». Marca «Asignar este diseño al TPV activo al guardar» para aplicarlo al puesto en uso; una asignación directa del puesto prevalece sobre la plantilla predeterminada. En Puntos de venta → Impresoras puedes asignar colas de Windows al ticket de prueba y al informe Z, elegir impresión manual o automática del ticket y crear rutas de cocina por BARRA/COCINA y centro. Para una impresora Concod con controlador «Generic / Text Only», elige «Texto RAW» en el ticket, el Z y las rutas de cocina. El papel de 80 mm admite inicialmente 48 columnas; puedes ajustar columnas, líneas de avance y corte por destino. Prueba primero «Sin corte» y después «Corte parcial» solo si el equipo dispone de cortador ESC/POS compatible. El modo «Automático» intenta reconocer ese controlador. «Imprimir prueba» permite elegir RAW y envía una hoja real. Los trabajos fallidos aparecen para reintentarlos; comprueba la entrega con la impresora física.
 Para probar dispositivos, guarda y activa el perfil. «Comprobar red» verifica la conexión TCP de la IP local y el puerto indicados sin imprimir; «Ver puertos COM» y «Leer balanza» prueban la lectura serie a la velocidad configurada. Los informes X/Z de jornada se abren desde Caja y jornada; usan el destino de impresión de Z del puesto. El antiguo resumen de prueba por fecha se conserva como compatibilidad interna, separado de los cierres nuevos.
 Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y en Windows 10 actualizado); no requiere instalar Python ni conexión a Internet. Si WebView2 no está disponible, la aplicación se abre en el navegador como antes.
+
+## Novedades 0.29 · icono del servidor y monitor de cocina
+
+- **Icono de Marchan2 Servidor junto a la hora** (área de notificación), presente mientras el servidor está en marcha. Doble clic abre el estado del servidor; con el botón derecho: «Abrir server.cfg» y «Detener servidor». Para que esté siempre visible y no en la flecha ^ de iconos ocultos, arrástralo a la barra o actívalo en Configuración de Windows → Personalización → Barra de tareas → Otros iconos de la bandeja del sistema.
+- **Corregido el monitor de cocina**: una capa oscura invisible tapaba la pantalla y no dejaba escribir el código ni elegir el monitor.
+- En el propio equipo del servidor, el monitor de cocina no pide código de emparejamiento.
 
 ## Novedades 0.28 · servidor, monitores de cocina y cierre flexible
 

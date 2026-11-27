@@ -147,7 +147,7 @@ def main(default_app='tpv'):
                 if path=='/api/access':
                     users=store.users()
                     if args.app=='admin':users=[u for u in users if u['role']=='admin']
-                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.28'))
+                    return self.reply(200,dict(app=args.app,users=users,user=self.user(),version='0.29'))
                 user=self.user()
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/comandero':
@@ -439,6 +439,7 @@ def main(default_app='tpv'):
         def allowed(self):return True
         def device(self):
             path=self.path.split('?')[0]
+            if self.client_address[0] in ('127.0.0.1','::1',comandero.local_ip()):return True  # el propio equipo del servidor no necesita emparejarse
             if path in LAN_OPEN or (path.endswith('.js') and not path.startswith('/api/')):return True
             token_value=self.headers.get('X-Marchan2-Device') or ''
             if not token_value:
@@ -486,6 +487,14 @@ def main(default_app='tpv'):
             if desktop.run(server,url+('/servidor' if args.servidor else ''),title,folder/'webview',fullscreen=args.fullscreen,log=folder/'desktop.log'):
                 server.server_close();return
         except Exception:pass
+    if args.servidor and args.segundo_plano and not os.environ.get('MARCHAN2_SIN_ICONO'):
+        # Icono junto a la hora mientras el servidor está en marcha.
+        import tray
+        worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
+        label=lambda:comandero.status(store,lan['port'])['url'].removeprefix('http://')
+        if tray.run(folder,assets/'logo.png',label,server_config.path(folder),server.shutdown,worker):
+            worker.join(timeout=10);server.server_close();return
+        worker.join();server.server_close();return
     if not args.no_browser:webbrowser.open(url)
     try:server.serve_forever()
     except KeyboardInterrupt:pass

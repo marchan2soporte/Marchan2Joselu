@@ -1,5 +1,10 @@
 # Cambios de Marchan2
 
+## 0.29
+- Icono de Marchan2 Servidor en el área de notificación (pystray): estado, server.cfg y detener.
+- Corregida la capa del monitor de cocina que bloqueaba la pantalla ([hidden] sobrescrito por CSS); regla global [hidden] en la app.
+- El equipo del servidor abre el monitor de cocina sin emparejar.
+
 ## 0.28
 - Marchan2_Servidor.exe y server.cfg: servidor de red en segundo plano que arrancan solos el TPV y la Administración, instancia única, ventana de estado con «Detener servidor» y modo cliente para otros TPV.
 - Emparejamiento del móvil persistente (cookie) y sesión guardada en el dispositivo; manifiesto web.
