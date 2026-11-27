@@ -6,7 +6,7 @@
   "portable_filename": "Marchan2_v0.28_Windows.zip",
   "python": "3.14",
   "validation": {
-    "unit_tests": 111,
+    "unit_tests": 112,
     "source_integration": "passed",
     "frozen_integration": "passed",
     "javascript_tests": 4

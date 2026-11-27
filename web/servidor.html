@@ -10,9 +10,10 @@ body{margin:0;padding:24px;background:var(--bg)}h1{margin:0;font-size:26px}h1 sp
 .code{font-size:44px;font-weight:800;letter-spacing:8px;color:var(--mint);font-variant-numeric:tabular-nums}
 button{font:inherit;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;background:#ffffff14;color:var(--ink)}button:hover{background:#ffffff22}
 ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#ffffff08}
+button.stop{background:#d0533f33;color:#ff9a8d}button.stop:hover{background:#d0533f55}
 .note{margin-top:14px;padding:12px 14px;border-radius:14px;background:#d4a72c22;color:#f2cf73;font-size:13px;line-height:1.5}
 </style></head><body>
-<div class="top"><div><small>MARCHAN2</small><h1>Servidor<span>.</span></h1></div><span class="live" id="live"><i></i> Activo</span></div>
+<div class="top"><div><small>MARCHAN2</small><h1>Servidor<span>.</span></h1></div><div style="display:flex;gap:10px;align-items:center"><span class="live" id="live"><i></i> Activo</span><button id="stop" class="stop">⏻ Detener servidor</button></div></div>
 <div class="grid">
  <section class="card"><h2>Comandero móvil y TPV de otros equipos</h2><div class="url" id="url">…</div><p class="muted">Abre esta dirección en el navegador del móvil o configúrala en el server.cfg de otros equipos (<code>[cliente] servidor</code>).</p></section>
  <section class="card"><h2>Monitores de cocina</h2><div class="url" id="kds">…</div><ul id="monitors" style="margin-top:12px"></ul></section>
@@ -20,7 +21,7 @@ ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}li{display:flex;justi
  <section class="card"><h2>Dispositivos emparejados</h2><ul id="devices"></ul></section>
  <section class="card"><h2>Configuración</h2><p class="muted" id="cfg"></p><button id="opencfg">Abrir server.cfg</button><p class="muted">Tras editarlo, cierra esta ventana y vuelve a abrir Marchan2 Servidor.</p></section>
 </div>
-<div class="note">⚠ Mantén esta ventana abierta mientras se trabaja: si se cierra, los móviles y los monitores dejan de funcionar. Reserva una IP fija para este equipo en el router para que la dirección no cambie (si cambia, los móviles tendrán que volver a emparejarse). Usa solo la wifi privada del local.</div>
+<div class="note">El servidor funciona en segundo plano: puedes cerrar esta ventana y seguirá dando servicio a móviles y monitores. Se pone en marcha solo al abrir el TPV o la Administración en este equipo. Reserva una IP fija para este equipo en el router para que la dirección no cambie (si cambia, los móviles tendrán que volver a emparejarse). Usa solo la wifi privada del local.</div>
 <script>
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function load(){try{const r=await fetch('/api/server_status').then(r=>r.json());
@@ -32,6 +33,7 @@ async function load(){try{const r=await fetch('/api/server_status').then(r=>r.js
  document.getElementById('cfg').innerHTML=`Puerto <b>${r.cfg.port}</b> · escucha en <b>${esc(r.cfg.listen)}</b><br>${esc(r.config)}`}catch(e){document.getElementById('live').className='live off'}}
 async function post(a){await fetch('/api/'+a,{method:'POST',headers:{'Content-Type':'application/json','X-Marchan2-Token':TOKEN},body:'{}'});load()}
 let TOKEN='';fetch('/').then(r=>r.text()).then(t=>{TOKEN=(t.match(/marchan-token" content="([^"]+)/)||[])[1]||''});
+document.getElementById('stop').onclick=async()=>{if(!confirm('¿Detener el servidor? Los móviles y los monitores de cocina dejarán de funcionar hasta que vuelvas a abrir Marchan2.'))return;await post('server_stop');document.body.innerHTML='<div style="padding:40px;font-family:Segoe UI"><h1>Servidor detenido</h1><p style="color:#8ea3a2">Puedes cerrar esta ventana. Se volverá a iniciar al abrir el TPV, la Administración o Marchan2 Servidor.</p></div>'};
 document.getElementById('newcode').onclick=()=>post('server_new_code');document.getElementById('opencfg').onclick=()=>post('server_open_cfg');
 load();setInterval(load,5000);
 </script></body></html>

@@ -48,13 +48,22 @@ def main(default_app='tpv'):
     parser.add_argument('--no-browser',action='store_true',help='Solo servidor, sin ventana (pruebas).')
     parser.add_argument('--browser',action='store_true',help='Abrir en el navegador en lugar de la ventana de escritorio.')
     parser.add_argument('--lan-host',default='0.0.0.0',help=argparse.SUPPRESS)
+    parser.add_argument('--segundo-plano',action='store_true',help='Servidor sin ventana (lo arrancan TPV y Administración).')
     parser.add_argument('--fullscreen',action='store_true',help='Ventana a pantalla completa (modo quiosco del TPV).')
     args=parser.parse_args()
     folder=Path(args.data) if args.data else Path(os.environ.get('LOCALAPPDATA',str(Path.home())))/'Marchan2'
     folder.mkdir(parents=True,exist_ok=True)
     args.servidor=args.app=='servidor'
+    if args.servidor and not args.segundo_plano and not args.no_browser:
+        # Marchan2_Servidor.exe abierto por el usuario: asegura el servidor en segundo plano y muestra su estado.
+        info=server_config.start_background(folder,wait=12)
+        if not info:
+            desktop.message('Marchan2 · Servidor','No se pudo iniciar el servidor en segundo plano. Revisa desktop.log en '+str(folder));return
+        if not desktop.open_remote(info['url']+'/servidor','Marchan2 · Servidor',folder/'webview-servidor',log=folder/'desktop.log'):webbrowser.open(info['url']+'/servidor')
+        return
     if args.servidor:
-        args.app='tpv';server_config.ensure(folder)
+        args.app='tpv';args.no_browser=True;server_config.ensure(folder)
+        if server_config.running(folder):return  # ya hay un servidor en marcha
     elif not args.no_browser and server_config.client_url(folder):
         # Equipo cliente: abre el TPV del servidor indicado en server.cfg, sin base de datos local.
         remote=server_config.client_url(folder)
@@ -63,6 +72,9 @@ def main(default_app='tpv'):
             webbrowser.open(remote);return
         desktop.message('Marchan2 · Administración',f'Este equipo está configurado como cliente de {remote} en {server_config.path(folder)}. La Administración se abre en el equipo servidor.')
         return
+    elif not args.no_browser and not os.environ.get('MARCHAN2_SIN_SERVIDOR'):
+        # TPV o Administración en el equipo principal: el servidor queda en segundo plano.
+        server_config.start_background(folder)
     store=Store(folder/'marchan2.db')
     inventory.initialize(store)
     series.initialize(store)
@@ -111,6 +123,8 @@ def main(default_app='tpv'):
                     html=(assets/'index.html').read_text(encoding='utf8').replace('__TOKEN__',token).replace('__MODE__',args.app).replace('__LAN__','1' if self.lan else '0').replace('__APPNAME__','TPV' if args.app=='tpv' else 'Administración')
                     return self.reply(200,html.encode(),'text/html; charset=utf-8')
                 if path=='/logo.png':return self.reply(200,(assets/'logo.png').read_bytes(),'image/png')
+                if path=='/api/server_ping' and args.servidor and not self.lan:
+                    return self.reply(200,{'ok':True,'pid':os.getpid(),'lan_port':lan['port']})
                 if path=='/servidor' and args.servidor and not self.lan:
                     return self.reply(200,(assets/'servidor.html').read_bytes(),'text/html; charset=utf-8')
                 if path=='/api/server_status' and args.servidor and not self.lan:
@@ -138,7 +152,8 @@ def main(default_app='tpv'):
                 if not user:return self.reply(401,{'error':'Selecciona tu usuario e introduce el PIN.'})
                 if path=='/api/comandero':
                     if user['role']!='admin' or self.lan:return self.reply(403,{'error':'El comandero se gestiona desde el TPV principal con un administrador.'})
-                    return self.reply(200,comandero.status(store,lan['port']))
+                    running_port=lan['port'] or ((server_config.running(folder) or {}).get('lan_port'))
+                    return self.reply(200,comandero.status(store,running_port))
                 if path=='/api/verifactu':
                     if args.app!='admin':return self.reply(403,{'error':'Solo Administración.'})
                     return self.reply(200,verifactu.status(store))
@@ -246,8 +261,10 @@ def main(default_app='tpv'):
                 size=int(self.headers.get('Content-Length','0'))
                 if size<1 or size>1_000_000:raise ValueError('Petición demasiado grande o vacía.')
                 data=json.loads(self.rfile.read(size));action=self.path.removeprefix('/api/')
-                if action in ('server_open_cfg','server_new_code') and args.servidor and not self.lan:
+                if action in ('server_open_cfg','server_new_code','server_stop') and args.servidor and not self.lan:
                     if action=='server_new_code':return self.reply(200,comandero.new_code(store))
+                    if action=='server_stop':
+                        self.reply(200,{'ok':True});threading.Thread(target=self.server.shutdown,daemon=True).start();return
                     os.startfile(str(server_config.path(folder)));return self.reply(200,{'ok':True})
                 if action.startswith('kds/'):
                     return self.reply(200,kitchen.kds_action(store,action.removeprefix('kds/'),data))
@@ -457,10 +474,11 @@ def main(default_app='tpv'):
             threading.Thread(target=lan_server.serve_forever,daemon=True).start()
             print('Red local · '+comandero.status(store,lan['port'])['url'],flush=True)
         except OSError as error:
+            if args.servidor and server_config.running(folder):server.server_close();return
             (folder/'desktop.log').open('a',encoding='utf8').write(f'No se pudo abrir el comandero móvil: {error}'+chr(10))
     backup.start_scheduler(store,threading.Event())
     url=f'http://127.0.0.1:{server.server_port}'
-    (folder/f"session-{'servidor' if args.servidor else args.app}.json").write_text(json.dumps({'url':url,'pid':os.getpid(),'app':args.app}),encoding='utf8')
+    (folder/f"session-{'servidor' if args.servidor else args.app}.json").write_text(json.dumps({'url':url,'pid':os.getpid(),'app':args.app,'lan_port':lan['port']}),encoding='utf8')
     print('Marchan2 '+args.app+' · '+url,flush=True)
     if not args.no_browser and not args.browser:
         title='Marchan2 · Servidor' if args.servidor else 'Marchan2 · '+('TPV' if args.app=='tpv' else 'Administración')

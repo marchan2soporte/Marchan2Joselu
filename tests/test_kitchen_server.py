@@ -95,6 +95,30 @@ class KitchenServerTests(unittest.TestCase):
         server_config.path(self.folder).write_text(text, encoding='utf-8')
         self.assertEqual(server_config.client_url(self.folder), 'http://192.168.1.10:8790')
         self.assertEqual(server_config.summary(self.folder)['mode'], 'cliente')
+        server_config.path(self.folder).write_bytes(bytes([0xEF, 0xBB, 0xBF]) + b'[servidor]\npuerto = 8811\nescuchar = 127.0.0.1\n')
+        self.assertEqual((server_config.read(self.folder)['port'], server_config.read(self.folder)['listen']), (8811, '127.0.0.1'))
+
+    def test_background_server_starts_once_and_stops(self):
+        import json, re, time, urllib.request
+        server_config.ensure(self.folder, 8893)
+        cfg = server_config.path(self.folder)
+        cfg.write_text(cfg.read_text(encoding='utf-8').replace('escuchar = 0.0.0.0', 'escuchar = 127.0.0.1'), encoding='utf-8')
+        info = server_config.start_background(self.folder, wait=20)
+        self.assertIsNotNone(info)
+        try:
+            self.assertEqual(server_config.start_background(self.folder)['pid'], info['pid'])
+            self.assertEqual(info['lan_port'], 8893)
+            self.assertEqual(urllib.request.urlopen('http://127.0.0.1:8893/cocina').status, 200)
+        finally:
+            html = urllib.request.urlopen(info['url'] + '/').read().decode()
+            token = re.search(r'marchan-token" content="([^"]+)', html).group(1)
+            request = urllib.request.Request(info['url'] + '/api/server_stop', data=b'{}', headers={'Content-Type': 'application/json', 'X-Marchan2-Token': token})
+            urllib.request.urlopen(request).read()
+            for _ in range(20):
+                if not server_config.running(self.folder):
+                    break
+                time.sleep(0.25)
+        self.assertIsNone(server_config.running(self.folder))
 
 
 if __name__ == '__main__':

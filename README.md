@@ -13,9 +13,9 @@ Windows 10/11 de 64 bits con Microsoft Edge WebView2 (incluido en Windows 11 y e
 
 ## Novedades 0.28 · servidor, monitores de cocina y cierre flexible
 
-- **Marchan2 Servidor y server.cfg (como en Ágora).** En el equipo principal abre `Marchan2_Servidor.exe`. Crea `%LOCALAPPDATA%\Marchan2\server.cfg` (puerto, interfaz y nombre) y su ventana muestra la dirección para los móviles, la de los monitores de cocina (`/cocina`), el código de emparejamiento y los dispositivos. Debe estar abierto mientras se trabaja.
+- **Marchan2 Servidor y server.cfg (como en Ágora).** El servidor arranca solo y **en segundo plano** al abrir el TPV o la Administración en el equipo principal, y sigue funcionando aunque se cierren. Usa `%LOCALAPPDATA%\Marchan2\server.cfg` (puerto, interfaz y nombre), que se crea la primera vez. `Marchan2_Servidor.exe` abre su **ventana de estado** (dirección para los móviles, monitores de cocina `/cocina`, código de emparejamiento, dispositivos y el botón «Detener servidor»); cerrar esa ventana no detiene el servidor. Detén el servidor antes de actualizar Marchan2.
   - **Otros TPV de la red:** en su `server.cfg`, `[cliente] servidor = IP:PUERTO`. `Marchan2_TPV.exe` abrirá el TPV del servidor, sin base de datos propia.
-  - Si existe `server.cfg`, el TPV ya no abre la red: lo hace el servidor. Sin `server.cfg` todo sigue como antes (comandero integrado en el TPV).
+  - La primera vez, Windows pedirá permiso del firewall para «Marchan2_Servidor»: acéptalo en redes privadas.
   - Reserva en el router una IP fija para el servidor: si la dirección cambia, los móviles tendrán que emparejarse otra vez.
 - **El móvil ya no se desvincula al salir de la app**: el emparejamiento se guarda también en una cookie de larga duración y la sesión del camarero se mantiene (12 horas) aunque se cierre el navegador. Se puede instalar como app (manifiesto web).
 - **Plano de mesas en el móvil**: botón «Plano / Lista» en Mesas, con la forma y la posición dibujadas en Administración.
@@ -152,7 +152,7 @@ Para copiar los datos, cierra ambas aplicaciones y copia toda la carpeta de dato
 TicketBAI está solicitado y pendiente; NO se ha implementado firma, envío, registro ni homologación. Tampoco está lista la facturación comercial ni los documentos fiscales. Los tickets siguen siendo de demostración/no fiscales.
 
 ## Validación
-111 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
+112 pruebas automatizadas y 4 pruebas de calculadora, más pruebas de ambos ejecutables: sesiones, permisos, datos compartidos, informes, proveedores, recepciones, valoración, ventas, pagos parciales y reinicio.
 Fuentes: Python, SQLite, pywebview y HTML/CSS/JS locales. El diseño está en web/theme.css (variables de color, modo oscuro y pantalla de venta).
 Dependencias: python -m pip install -r requirements.txt
 Ejecutar: python tpv.py / python admin.py (añade --browser para usar el navegador o --fullscreen para pantalla completa)

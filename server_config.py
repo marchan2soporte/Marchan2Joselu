@@ -47,7 +47,7 @@ def read(folder):
     cfg = configparser.ConfigParser(inline_comment_prefixes=(';', '#'))
     if exists(folder):
         try:
-            cfg.read(path(folder), encoding='utf-8')
+            cfg.read(path(folder), encoding='utf-8-sig')  # admite el BOM que añade el Bloc de notas
         except configparser.Error:
             pass
     port = cfg.getint('servidor', 'puerto', fallback=DEFAULT_PORT) if cfg.has_section('servidor') else DEFAULT_PORT
@@ -91,3 +91,69 @@ def summary(folder):
     cfg = read(folder)
     return {'mode': 'cliente' if cfg['client_target'] else 'servidor', 'config': str(path(folder)), 'port': cfg['port'],
             'name': cfg['name'], 'client_target': cfg['client_target']}
+
+
+# ---------- Servidor en segundo plano ----------
+def session_file(folder):
+    return Path(folder) / 'session-servidor.json'
+
+
+def running(folder, timeout=1.0):
+    """Datos del servidor en marcha ({'url','lan_port','pid'}) o None si no responde."""
+    import json
+    import urllib.request
+    try:
+        info = json.loads(session_file(folder).read_text(encoding='utf-8'))
+        with urllib.request.urlopen(info['url'] + '/api/server_ping', timeout=timeout) as response:
+            if json.loads(response.read()).get('ok'):
+                return info
+    except Exception:
+        return None
+    return None
+
+
+def background_command(folder):
+    import sys
+    exe = Path(sys.executable)
+    if getattr(sys, 'frozen', False):
+        target = exe.with_name('Marchan2_Servidor.exe')
+        if not target.exists():
+            return None
+        command = [str(target)]
+    else:
+        pythonw = exe.with_name('pythonw.exe')
+        command = [str(pythonw if pythonw.exists() else exe), str(Path(__file__).with_name('servidor.py'))]
+    return command + ['--segundo-plano', '--data', str(folder)]
+
+
+def start_background(folder, wait=0.0):
+    """Arranca Marchan2 Servidor oculto si no está en marcha. Devuelve sus datos o None."""
+    import subprocess
+    import sys
+    import time
+    info = running(folder)
+    if info:
+        return info
+    ensure(folder)
+    command = background_command(folder)
+    if not command:
+        return None
+    flags = 0
+    if sys.platform == 'win32':
+        flags = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+    try:
+        subprocess.Popen(command, creationflags=flags | 0x01000000, close_fds=True,  # CREATE_BREAKAWAY_FROM_JOB
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        try:
+            subprocess.Popen(command, creationflags=flags, close_fds=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            return None
+    end = time.monotonic() + wait
+    while time.monotonic() < end:
+        time.sleep(0.25)
+        info = running(folder)
+        if info:
+            return info
+    return None
