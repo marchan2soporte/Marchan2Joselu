@@ -1,5 +1,7 @@
 """End-to-end authenticated app boundary checks, on isolated data only."""
 import argparse
+import os
+import traceback
 import json
 import re
 import subprocess
@@ -22,8 +24,8 @@ class Client:
         (folder/f'session-{app}.json').unlink(missing_ok=True)
         self.proc=subprocess.Popen(command+['--data',str(folder),'--no-browser'],creationflags=subprocess.CREATE_NO_WINDOW)
         self.session='';self.token='';self.url=''
-        for _ in range(100):
-            if self.proc.poll() is not None:raise AssertionError('Server exited')
+        for _ in range(600):  # hasta 60 s: los equipos de GitHub Actions son más lentos
+            if self.proc.poll() is not None:raise AssertionError('Server exited with code '+str(self.proc.returncode))
             path=folder/f'session-{app}.json'
             if path.exists():
                 info=json.loads(path.read_text())
@@ -42,7 +44,7 @@ class Client:
         if csrf:headers['X-Marchan2-Token']=self.token
         req=Request(self.url+'/api/'+path,data=json.dumps(data).encode() if data is not None else None,headers=headers)
         try:
-            with urlopen(req,timeout=10) as r:
+            with urlopen(req,timeout=60) as r:
                 result=json.loads(r.read());actual=r.status
         except HTTPError as e:actual=e.code;result=json.loads(e.read())
         assert actual==status,(path,actual,status,result)
@@ -52,159 +54,171 @@ class Client:
         result=self.request('login',{'user_id':uid,'pin':pin});self.session=result['session']
 
     def stop(self):
-        try:self.login();self.request('shutdown',{});self.proc.wait(timeout=5)
-        except Exception:self.proc.terminate();self.proc.wait(timeout=5)
+        try:self.login();self.request('shutdown',{});self.proc.wait(timeout=30)
+        except Exception:self.proc.terminate();self.proc.wait(timeout=30)
 
 
-with tempfile.TemporaryDirectory() as tmp:
-    folder=Path(tmp);tpv=None;admin=None
-    try:
-        tpv=Client('tpv',folder);admin=Client('admin',folder)
-        for client in (tpv,admin):
-            assert 'pin_hash' not in json.dumps(client.request('access'))
-            client.request('state',status=401)
-            client.request('company',status=401)
-            client.request('company',{'legal_name':'BLOCKED'},status=401)
-            client.request('open',{'direct':True},status=401)
-            client.request('login',{'user_id':1,'pin':'0000'},status=400)
-        admin.login();assert len(admin.request('analytics/dashboard')['cards'])==4
-        profile_id=admin.request('pos_profiles')[0]['id']
-        print_config=admin.request('printing?profile_id='+str(profile_id))
-        assert print_config['documents']['receipt']['printer_name']==''
-        admin.request('printing_document_save',{'profile_id':profile_id,'kind':'receipt',
-            'printer_name':'','copies':1,'print_mode':'manual'})
-        assert admin.request('printing?profile_id='+str(profile_id))['documents']['receipt']['copies']==1
-        assert admin.request('pos_profiles')[0]['active']
-        assert admin.request('peripheral_ports')['ports'] is not None
-        admin.request('printer_probe',{},status=400)
-        admin.request('scale_probe',{},status=400)
-        assert admin.request('ticket_templates')==[]
-        admin.request('ticket_template_save',{'name':'QA','base':'80 mm','header':'Cabecera QA',
-            'footer':'Pie QA','show_time':True,'show_user':True,'show_tax':True,
-            'is_default':False,'apply_to_active_profile':True})
-        assert admin.request('state')['ticket_template']['header']=='Cabecera QA'
-        assert admin.request('pos_profiles')[0]['options']['receipt_template_id']==admin.request('ticket_templates')[0]['id']
-        assert admin.request('series')==[]
-        admin.request('series_save',{'name':'F QA','type':'Factura','next_number':'1','active':True})
-        assert admin.request('series')[0]['name']=='F QA'
-        config=admin.request('global_config');assert config['pos_series']['Factura'] is None
-        config['pos_series']['Factura']=admin.request('series')[0]['id']
-        config['preferences']['stock_warning']=True
-        config['preferences']['command_template']=str(admin.request('ticket_templates')[0]['id'])
-        config['preferences']['include_center_sales']=True
-        config['preferences']['include_pending']=True
-        admin.request('global_config',config)
-        assert admin.request('global_config')['pos_series']['Factura']==config['pos_series']['Factura']
-        assert admin.request('global_config')['preferences']['stock_warning']
-        admin.request('series_save',{'name':'F QA','type':'Factura','next_number':'2'},status=409)
-        assert admin.request('company')['legal_name']==''
-        admin.request('company',{'legal_name':'EMPRESA QA','postal_code':'01001'})
-        assert admin.request('company')['postal_code']=='01001'
-        assert admin.request('state')['company']['legal_name']=='EMPRESA QA'
-        admin.request('company',{'email':'invalid'},status=400)
-        assert admin.request('company')['legal_name']=='EMPRESA QA'
-        assert len(admin.request('analytics/catalog'))>50
-        admin.request('supplier',{'name':'PROVEEDOR QA'})
-        admin.request('stock_item',{'name':'HARINA QA','unit':'KG','minimum':'2'})
-        admin.request('stock_move',{'item_id':1,'supplier_id':1,'qty':'1.250','cost':'2.40','kind':'receipt','request_id':'stock-qa','reference':'QA'})
-        assert admin.request('inventory')['items'][0]['balance']==1250
-        assert admin.request('analytics/dashboard')['stock']['current']==300
-        admin.request('open',{'direct':True},status=403)
-        admin.request('user',{'name':'ANA QA','pin':'4567','role':'staff'})
-        ana=next(u for u in admin.request('state')['users'] if u['name']=='ANA QA')
-        admin.request('login',{'user_id':ana['id'],'pin':'4567'},status=400)
-        tpv.login(ana['id'],'4567')
-        tpv.request('open',{'direct':True},status=400)
-        tpv.request('cash_open',{'opening':'100','request_id':'initial-cash-opening'})
-        admin.request('cash_open',{'opening':'100','request_id':'blocked-cash-opening'},status=403)
-        layout=admin.request('button_layout')
-        layout['layout']['others'].append(layout['layout']['right'].pop(0))
-        admin.request('button_layout_save',layout)
-        assert tpv.request('state')['button_layout']['layout']==layout['layout']
-        tpv.request('button_layout_save',layout,status=403)
-        layout=admin.request('button_layout');layout['calculator_enabled']=False
-        admin.request('button_layout_save',layout);assert tpv.request('state')['button_layout']['calculator_enabled'] is False
-        layout=admin.request('button_layout');layout['calculator_enabled']=True
-        admin.request('button_layout_save',layout)
-        profile=admin.request('user_profile_save',{'name':'QA restringido','permissions':['ticket_open']})['id']
-        admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff','profile_id':profile})
-        assert tpv.request('state')['permissions']==['ticket_open']
-        tpv.request('print_document',{'kind':'z_report'},status=403)
-        tpv.request('pay',{'order_id':999,'expected_total':0},status=403)
-        tpv.request('line_discount',{'line_id':999},status=403)
-        tpv.request('cash',status=403)
-        tpv.request('cash_move',{'session_id':1,'kind':'income','amount':'1','reason':'Blocked','request_id':'blocked-cash-movement'},status=403)
-        admin.request('user_profile_save',{'id':profile,'name':'QA restringido','permissions':['ticket_open','ticket_pay']})
-        assert 'ticket_pay' in tpv.request('state')['permissions']
-        admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff',
-                              'profile_id':next(p for p in admin.request('user_profiles')['profiles'] if p['name']=='Encargado')['id']})
-        tpv.request('analytics/dashboard',status=403)
-        tpv.request('inventory',status=403)
-        tpv.request('company',status=403)
-        tpv.request('series',status=403)
-        tpv.request('global_config',status=403)
-        tpv.request('pos_profiles',status=403)
-        tpv.request('printing?profile_id='+str(profile_id),status=403)
-        assert tpv.request('print_document',{'kind':'z_report'})['configured'] is False
-        tpv.request('printer_probe',{},status=403)
-        assert tpv.request('z_report')['kind']=='z_preview'
-        assert tpv.request('state')['ticket_template']['header']=='Cabecera QA'
-        assert tpv.request('state')['global_config']['preferences']['stock_warning']
-        assert tpv.request('state')['command_template']['header']=='Cabecera QA'
-        assert [s['title'] for s in tpv.request('daily_close')['sections']]==['Ventas por centro','Cuentas pendientes ahora']
-        tpv.request('ticket_templates',status=403)
-        tpv.request('ticket_template_save',{'name':'BLOCKED'},status=403)
-        tpv.request('series_save',{'name':'BLOCKED'},status=403)
-        tpv.request('company',{'legal_name':'BLOCKED'},status=403)
-        tpv.request('product',{'name':'BLOCKED'},status=403)
-        tpv.request('open',{'direct':True},csrf=False,status=403)
-        tpv.request('open',{},status=400)
-        state=tpv.request('state');assert not any(k in state for k in ('stats','history','users'))
-        assert state['company']['legal_name']=='EMPRESA QA'
-        assert state['stock_warnings'][0]['name']=='HARINA QA'
-        product=next(p for p in state['products'] if p['name']=='JHONNY NEGRO')
-        pid=admin.request('product',{'name':'PESO QA','category_id':1,'weighed':True,'formats':[{'name':'KILO','price':'20'}]})['product_id']
-        weighed=next(p for p in tpv.request('state')['products'] if p['id']==pid)
-        weight_order=tpv.request('open',{'direct':True})['order_id']
-        lid=tpv.request('add',{'order_id':weight_order,'format_id':weighed['formats'][0]['id'],'weight':'0.250'})['line_id']
-        tpv.request('line_discount',{'line_id':lid,'kind':'percent','value':'10','expected_revision':0,'expected_price':500,'expected_qty':1,'request_id':'api-discount-test'})
-        assert tpv.request('receipt/'+str(weight_order))['total']==450
-        tpv.request('line_weight',{'line_id':lid,'value':'0.500','expected_revision':1,'expected_price':450,'expected_qty':1,'request_id':'api-weight-test'})
-        assert tpv.request('receipt/'+str(weight_order))['total']==900
-        tpv.request('cancel_ticket',{'order_id':weight_order,'reason':'Prueba API de peso terminada'})
-        oid=tpv.request('open',{'table_id':1})['order_id']
-        for fmt in product['formats']:tpv.request('add',{'order_id':oid,'format_id':fmt['id']})
-        order=tpv.request('state')['orders'][0]
-        assert order['created_by']==ana['id'] and order['total']==12900
-        tpv.request('march',{'order_id':oid,'line_ids':[order['lines'][0]['id']]})
-        order=tpv.request('state')['orders'][0];assert [l['kitchen'] for l in order['lines']]==['pending','new']
-        tpv.request('pay',{'order_id':oid,'expected_total':12900,'expected_due':12900,'payment':'card','amount':6400,'request_id':'dual-part1'})
-        assert admin.request('state')['stats']['revenue']==6400
-        remaining=tpv.request('state')['orders'][0];assert remaining['due']==6500
-        tpv.request('move',{'order_id':oid,'table_id':2})
-        tpv.request('pay',{'order_id':oid,'expected_total':12900,'expected_due':6500,'payment':'cash','tendered':'70','request_id':'dual-part2'})
-        receipt=tpv.request('receipt/'+str(oid));assert receipt['due']==0 and receipt['payments'][-1]['change_due']==500
-        assert receipt['table_name']=='M2' and receipt['payments'][0]['user_id']==ana['id']
-        assert tpv.request('cash')['expected_cash']==16500
-        tpv.request('cash_move',{'session_id':1,'kind':'expense','amount':'5','reason':'Compra prueba','request_id':'cash-expense-test'})
-        tpv.request('cash_move',{'session_id':1,'kind':'income','amount':'2','reason':'Cambio prueba','request_id':'cash-income-test'})
-        cash=tpv.request('cash');assert cash['expected_cash']==16200
-        closing=tpv.request('cash_close',{'session_id':1,'expected_revision':cash['revision'],'counted_cash':'162','counted_card':'64','request_id':'cash-closing-test'})['report']
-        assert closing['cash_difference']==0 and closing['card_difference']==0
-        assert admin.request('cash?session_id=1')['kind']=='Z'
-        tpv.request('open',{'direct':True},status=400)
-        assert tpv.request('print_document',{'kind':'cash_z','session_id':1})['configured'] is False
-        admin.request('user',{'id':ana['id'],'name':'ANA QA','pin':'5678','role':'staff'})
-        tpv.request('state',status=401)
-        tpv.login(ana['id'],'5678');tpv.request('logout',{});tpv.request('state',status=401)
-        admin.request('user',{'id':1,'name':'ADMIN','role':'staff'},status=400)
-        tpv.stop();tpv=Client('tpv',folder);tpv.login()
-        assert tpv.request('receipt/'+str(oid))['total']==12900
-        for script in ('app.js','tpv.js'):
-            assert urlopen(tpv.url+'/'+script).status==200
-        try:urlopen(Request(tpv.url+'/admin.js',headers={'X-Marchan2-Session':tpv.session}));raise AssertionError('Admin script served by TPV')
-        except HTTPError as e:assert e.code==404
-        print('PASS: '+('FROZEN' if args.frozen else 'SOURCE')+' dual apps, shared data, login, staff/admin boundaries, explicit sale context, selected-line preparation, partial/mixed payments, move, actor attribution, PIN revocation, logout and restart.')
-    finally:
-        if tpv and tpv.proc.poll() is None:tpv.stop()
-        if admin and admin.proc.poll() is None:admin.stop()
+def report_failure():
+    # En GitHub Actions las anotaciones se ven sin iniciar sesión: así el error queda visible.
+    detail=traceback.format_exc()
+    print(detail,flush=True)
+    if os.environ.get('GITHUB_ACTIONS'):
+        print('::error title=check_dual_apps::'+detail[-1500:].replace('%','%25').replace(chr(13),'').replace(chr(10),'%0A'),flush=True)
+
+
+try:
+  with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+      folder=Path(tmp);tpv=None;admin=None
+      try:
+          tpv=Client('tpv',folder);admin=Client('admin',folder)
+          for client in (tpv,admin):
+              assert 'pin_hash' not in json.dumps(client.request('access'))
+              client.request('state',status=401)
+              client.request('company',status=401)
+              client.request('company',{'legal_name':'BLOCKED'},status=401)
+              client.request('open',{'direct':True},status=401)
+              client.request('login',{'user_id':1,'pin':'0000'},status=400)
+          admin.login();assert len(admin.request('analytics/dashboard')['cards'])==4
+          profile_id=admin.request('pos_profiles')[0]['id']
+          print_config=admin.request('printing?profile_id='+str(profile_id))
+          assert print_config['documents']['receipt']['printer_name']==''
+          admin.request('printing_document_save',{'profile_id':profile_id,'kind':'receipt',
+              'printer_name':'','copies':1,'print_mode':'manual'})
+          assert admin.request('printing?profile_id='+str(profile_id))['documents']['receipt']['copies']==1
+          assert admin.request('pos_profiles')[0]['active']
+          assert admin.request('peripheral_ports')['ports'] is not None
+          admin.request('printer_probe',{},status=400)
+          admin.request('scale_probe',{},status=400)
+          assert admin.request('ticket_templates')==[]
+          admin.request('ticket_template_save',{'name':'QA','base':'80 mm','header':'Cabecera QA',
+              'footer':'Pie QA','show_time':True,'show_user':True,'show_tax':True,
+              'is_default':False,'apply_to_active_profile':True})
+          assert admin.request('state')['ticket_template']['header']=='Cabecera QA'
+          assert admin.request('pos_profiles')[0]['options']['receipt_template_id']==admin.request('ticket_templates')[0]['id']
+          assert admin.request('series')==[]
+          admin.request('series_save',{'name':'F QA','type':'Factura','next_number':'1','active':True})
+          assert admin.request('series')[0]['name']=='F QA'
+          config=admin.request('global_config');assert config['pos_series']['Factura'] is None
+          config['pos_series']['Factura']=admin.request('series')[0]['id']
+          config['preferences']['stock_warning']=True
+          config['preferences']['command_template']=str(admin.request('ticket_templates')[0]['id'])
+          config['preferences']['include_center_sales']=True
+          config['preferences']['include_pending']=True
+          admin.request('global_config',config)
+          assert admin.request('global_config')['pos_series']['Factura']==config['pos_series']['Factura']
+          assert admin.request('global_config')['preferences']['stock_warning']
+          admin.request('series_save',{'name':'F QA','type':'Factura','next_number':'2'},status=409)
+          assert admin.request('company')['legal_name']==''
+          admin.request('company',{'legal_name':'EMPRESA QA','postal_code':'01001'})
+          assert admin.request('company')['postal_code']=='01001'
+          assert admin.request('state')['company']['legal_name']=='EMPRESA QA'
+          admin.request('company',{'email':'invalid'},status=400)
+          assert admin.request('company')['legal_name']=='EMPRESA QA'
+          assert len(admin.request('analytics/catalog'))>50
+          admin.request('supplier',{'name':'PROVEEDOR QA'})
+          admin.request('stock_item',{'name':'HARINA QA','unit':'KG','minimum':'2'})
+          admin.request('stock_move',{'item_id':1,'supplier_id':1,'qty':'1.250','cost':'2.40','kind':'receipt','request_id':'stock-qa','reference':'QA'})
+          assert admin.request('inventory')['items'][0]['balance']==1250
+          assert admin.request('analytics/dashboard')['stock']['current']==300
+          admin.request('open',{'direct':True},status=403)
+          admin.request('user',{'name':'ANA QA','pin':'4567','role':'staff'})
+          ana=next(u for u in admin.request('state')['users'] if u['name']=='ANA QA')
+          admin.request('login',{'user_id':ana['id'],'pin':'4567'},status=400)
+          tpv.login(ana['id'],'4567')
+          tpv.request('open',{'direct':True},status=400)
+          tpv.request('cash_open',{'opening':'100','request_id':'initial-cash-opening'})
+          admin.request('cash_open',{'opening':'100','request_id':'blocked-cash-opening'},status=403)
+          layout=admin.request('button_layout')
+          layout['layout']['others'].append(layout['layout']['right'].pop(0))
+          admin.request('button_layout_save',layout)
+          assert tpv.request('state')['button_layout']['layout']==layout['layout']
+          tpv.request('button_layout_save',layout,status=403)
+          layout=admin.request('button_layout');layout['calculator_enabled']=False
+          admin.request('button_layout_save',layout);assert tpv.request('state')['button_layout']['calculator_enabled'] is False
+          layout=admin.request('button_layout');layout['calculator_enabled']=True
+          admin.request('button_layout_save',layout)
+          profile=admin.request('user_profile_save',{'name':'QA restringido','permissions':['ticket_open']})['id']
+          admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff','profile_id':profile})
+          assert tpv.request('state')['permissions']==['ticket_open']
+          tpv.request('print_document',{'kind':'z_report'},status=403)
+          tpv.request('pay',{'order_id':999,'expected_total':0},status=403)
+          tpv.request('line_discount',{'line_id':999},status=403)
+          tpv.request('cash',status=403)
+          tpv.request('cash_move',{'session_id':1,'kind':'income','amount':'1','reason':'Blocked','request_id':'blocked-cash-movement'},status=403)
+          admin.request('user_profile_save',{'id':profile,'name':'QA restringido','permissions':['ticket_open','ticket_pay']})
+          assert 'ticket_pay' in tpv.request('state')['permissions']
+          admin.request('user',{'id':ana['id'],'name':'ANA QA','role':'staff',
+                                'profile_id':next(p for p in admin.request('user_profiles')['profiles'] if p['name']=='Encargado')['id']})
+          tpv.request('analytics/dashboard',status=403)
+          tpv.request('inventory',status=403)
+          tpv.request('company',status=403)
+          tpv.request('series',status=403)
+          tpv.request('global_config',status=403)
+          tpv.request('pos_profiles',status=403)
+          tpv.request('printing?profile_id='+str(profile_id),status=403)
+          assert tpv.request('print_document',{'kind':'z_report'})['configured'] is False
+          tpv.request('printer_probe',{},status=403)
+          assert tpv.request('z_report')['kind']=='z_preview'
+          assert tpv.request('state')['ticket_template']['header']=='Cabecera QA'
+          assert tpv.request('state')['global_config']['preferences']['stock_warning']
+          assert tpv.request('state')['command_template']['header']=='Cabecera QA'
+          assert [s['title'] for s in tpv.request('daily_close')['sections']]==['Ventas por centro','Cuentas pendientes ahora']
+          tpv.request('ticket_templates',status=403)
+          tpv.request('ticket_template_save',{'name':'BLOCKED'},status=403)
+          tpv.request('series_save',{'name':'BLOCKED'},status=403)
+          tpv.request('company',{'legal_name':'BLOCKED'},status=403)
+          tpv.request('product',{'name':'BLOCKED'},status=403)
+          tpv.request('open',{'direct':True},csrf=False,status=403)
+          tpv.request('open',{},status=400)
+          state=tpv.request('state');assert not any(k in state for k in ('stats','history','users'))
+          assert state['company']['legal_name']=='EMPRESA QA'
+          assert state['stock_warnings'][0]['name']=='HARINA QA'
+          product=next(p for p in state['products'] if p['name']=='JHONNY NEGRO')
+          pid=admin.request('product',{'name':'PESO QA','category_id':1,'weighed':True,'formats':[{'name':'KILO','price':'20'}]})['product_id']
+          weighed=next(p for p in tpv.request('state')['products'] if p['id']==pid)
+          weight_order=tpv.request('open',{'direct':True})['order_id']
+          lid=tpv.request('add',{'order_id':weight_order,'format_id':weighed['formats'][0]['id'],'weight':'0.250'})['line_id']
+          tpv.request('line_discount',{'line_id':lid,'kind':'percent','value':'10','expected_revision':0,'expected_price':500,'expected_qty':1,'request_id':'api-discount-test'})
+          assert tpv.request('receipt/'+str(weight_order))['total']==450
+          tpv.request('line_weight',{'line_id':lid,'value':'0.500','expected_revision':1,'expected_price':450,'expected_qty':1,'request_id':'api-weight-test'})
+          assert tpv.request('receipt/'+str(weight_order))['total']==900
+          tpv.request('cancel_ticket',{'order_id':weight_order,'reason':'Prueba API de peso terminada'})
+          oid=tpv.request('open',{'table_id':1})['order_id']
+          for fmt in product['formats']:tpv.request('add',{'order_id':oid,'format_id':fmt['id']})
+          order=tpv.request('state')['orders'][0]
+          assert order['created_by']==ana['id'] and order['total']==12900
+          tpv.request('march',{'order_id':oid,'line_ids':[order['lines'][0]['id']]})
+          order=tpv.request('state')['orders'][0];assert [l['kitchen'] for l in order['lines']]==['pending','new']
+          tpv.request('pay',{'order_id':oid,'expected_total':12900,'expected_due':12900,'payment':'card','amount':6400,'request_id':'dual-part1'})
+          assert admin.request('state')['stats']['revenue']==6400
+          remaining=tpv.request('state')['orders'][0];assert remaining['due']==6500
+          tpv.request('move',{'order_id':oid,'table_id':2})
+          tpv.request('pay',{'order_id':oid,'expected_total':12900,'expected_due':6500,'payment':'cash','tendered':'70','request_id':'dual-part2'})
+          receipt=tpv.request('receipt/'+str(oid));assert receipt['due']==0 and receipt['payments'][-1]['change_due']==500
+          assert receipt['table_name']=='M2' and receipt['payments'][0]['user_id']==ana['id']
+          assert tpv.request('cash')['expected_cash']==16500
+          tpv.request('cash_move',{'session_id':1,'kind':'expense','amount':'5','reason':'Compra prueba','request_id':'cash-expense-test'})
+          tpv.request('cash_move',{'session_id':1,'kind':'income','amount':'2','reason':'Cambio prueba','request_id':'cash-income-test'})
+          cash=tpv.request('cash');assert cash['expected_cash']==16200
+          closing=tpv.request('cash_close',{'session_id':1,'expected_revision':cash['revision'],'counted_cash':'162','counted_card':'64','request_id':'cash-closing-test'})['report']
+          assert closing['cash_difference']==0 and closing['card_difference']==0
+          assert admin.request('cash?session_id=1')['kind']=='Z'
+          tpv.request('open',{'direct':True},status=400)
+          assert tpv.request('print_document',{'kind':'cash_z','session_id':1})['configured'] is False
+          admin.request('user',{'id':ana['id'],'name':'ANA QA','pin':'5678','role':'staff'})
+          tpv.request('state',status=401)
+          tpv.login(ana['id'],'5678');tpv.request('logout',{});tpv.request('state',status=401)
+          admin.request('user',{'id':1,'name':'ADMIN','role':'staff'},status=400)
+          tpv.stop();tpv=Client('tpv',folder);tpv.login()
+          assert tpv.request('receipt/'+str(oid))['total']==12900
+          for script in ('app.js','tpv.js'):
+              assert urlopen(tpv.url+'/'+script).status==200
+          try:urlopen(Request(tpv.url+'/admin.js',headers={'X-Marchan2-Session':tpv.session}));raise AssertionError('Admin script served by TPV')
+          except HTTPError as e:assert e.code==404
+          print('PASS: '+('FROZEN' if args.frozen else 'SOURCE')+' dual apps, shared data, login, staff/admin boundaries, explicit sale context, selected-line preparation, partial/mixed payments, move, actor attribution, PIN revocation, logout and restart.')
+      finally:
+          if tpv and tpv.proc.poll() is None:tpv.stop()
+          if admin and admin.proc.poll() is None:admin.stop()
+except BaseException:
+    report_failure()
+    sys.exit(1)
